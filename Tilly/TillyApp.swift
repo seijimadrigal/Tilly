@@ -2,6 +2,7 @@ import SwiftUI
 import TillyCore
 import TillyProviders
 import TillyStorage
+import TillyTools
 
 @main
 struct TillyApp: App {

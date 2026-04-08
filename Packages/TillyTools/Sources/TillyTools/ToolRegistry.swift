@@ -20,4 +20,16 @@ public final class ToolRegistry: @unchecked Sendable {
         }
         return try await tool.execute(arguments: toolCall.function.arguments)
     }
+
+    /// Creates a registry with all built-in tools pre-registered.
+    public static func withBuiltinTools() -> ToolRegistry {
+        let registry = ToolRegistry()
+        registry.register(ShellExecutor())
+        registry.register(AppLauncher())
+        registry.register(FileReadTool())
+        registry.register(FileWriteTool())
+        registry.register(DirectoryListTool())
+        registry.register(WebFetchTool())
+        return registry
+    }
 }
