@@ -1,0 +1,51 @@
+name: Tilly
+options:
+  bundleIdPrefix: com.tilly
+  deploymentTarget:
+    macOS: "15.0"
+  xcodeVersion: "16.0"
+  groupSortPosition: top
+  generateEmptyDirectories: true
+
+packages:
+  TillyCore:
+    path: Packages/TillyCore
+  TillyProviders:
+    path: Packages/TillyProviders
+  TillyStorage:
+    path: Packages/TillyStorage
+  TillyTools:
+    path: Packages/TillyTools
+
+targets:
+  Tilly:
+    type: application
+    platform: macOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: Tilly
+        excludes:
+          - "Preview Content"
+    resources:
+      - path: Tilly/Assets.xcassets
+      - path: Tilly/Preview Content
+    dependencies:
+      - package: TillyCore
+      - package: TillyProviders
+      - package: TillyStorage
+      - package: TillyTools
+    entitlements:
+      path: Tilly/Tilly.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.tilly.app
+        PRODUCT_NAME: Tilly
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "6.0"
+        MACOSX_DEPLOYMENT_TARGET: "15.0"
+        INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.developer-tools"
+        INFOPLIST_KEY_NSHumanReadableCopyright: ""
+        GENERATE_INFOPLIST_FILE: YES
+        ENABLE_PREVIEWS: YES
+        SWIFT_STRICT_CONCURRENCY: complete

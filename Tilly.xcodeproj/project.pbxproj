@@ -1,0 +1,562 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		081117EAFF7088259E542D4A /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7714F7D37E3C1AE987EAE62 /* AppState.swift */; };
+		18634CDFD62DBD5A4571B6DD /* MessageContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2AE45D10BB1F0066765B9A6 /* MessageContentView.swift */; };
+		35953C20FEBE657284212099 /* TillyTools in Frameworks */ = {isa = PBXBuildFile; productRef = 4549431E15F91AEBCB52AA51 /* TillyTools */; };
+		4397EEF8ADF15BB331027A47 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7539F33A7EFEFEF5758F954 /* SidebarView.swift */; };
+		50A406395CF1EDD23D21F168 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B2F3390EB981E65499E8770 /* SettingsView.swift */; };
+		6AAE6F89D9A28BAF3878ABC0 /* TillyStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 41D604BDF3CE4BE6C9C398C8 /* TillyStorage */; };
+		93F132421C0AFC4B42812464 /* AppCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0391F5766AB5078D5BC063 /* AppCommands.swift */; };
+		947BC7FC90CE33B197B35BCA /* TillyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A13ACCD4FBF537ADE9A0734 /* TillyApp.swift */; };
+		A197CFE0888845B000B2DC32 /* TillyCore in Frameworks */ = {isa = PBXBuildFile; productRef = 12341AC689D4CF663BEC3587 /* TillyCore */; };
+		C9A5EA6E59400D999D4688A4 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A2D5E48C00DA600676E68B5 /* ContentView.swift */; };
+		CAECE438EBA8E08CF5EC3858 /* TillyProviders in Frameworks */ = {isa = PBXBuildFile; productRef = 0184A2A8C2F8F70485EEEC86 /* TillyProviders */; };
+		CC717D363813E811C3EA95C9 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C5ED9A99FF27D0D2869F82C /* ChatView.swift */; };
+		D47983A3F0BDFDB50BEF59D9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 71DA0E94FACD996ED7607F9C /* Assets.xcassets */; };
+		ED6F4EBC715D9F5721BC5E4E /* InputBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362249974F6531D337040ED5 /* InputBarView.swift */; };
+		FED2CB3442AE8B004678DCE4 /* MessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D7DB2AB7E6C97C4B5FBF5DE /* MessageView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		317F09C0FAE8D0CEC4ACC685 /* TillyProviders */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TillyProviders; path = Packages/TillyProviders; sourceTree = SOURCE_ROOT; };
+		362249974F6531D337040ED5 /* InputBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputBarView.swift; sourceTree = "<group>"; };
+		3A13ACCD4FBF537ADE9A0734 /* TillyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TillyApp.swift; sourceTree = "<group>"; };
+		3C5ED9A99FF27D0D2869F82C /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
+		71DA0E94FACD996ED7607F9C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		8B2F3390EB981E65499E8770 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		8D7DB2AB7E6C97C4B5FBF5DE /* MessageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageView.swift; sourceTree = "<group>"; };
+		9A2D5E48C00DA600676E68B5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		AA0391F5766AB5078D5BC063 /* AppCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCommands.swift; sourceTree = "<group>"; };
+		AA200997105B0DA4161B7947 /* TillyStorage */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TillyStorage; path = Packages/TillyStorage; sourceTree = SOURCE_ROOT; };
+		AB91B2CD9A2BF1D6165028B0 /* TillyTools */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TillyTools; path = Packages/TillyTools; sourceTree = SOURCE_ROOT; };
+		B2AE45D10BB1F0066765B9A6 /* MessageContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageContentView.swift; sourceTree = "<group>"; };
+		B56BEFD271A41F6BB08E777E /* Tilly.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tilly.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B7539F33A7EFEFEF5758F954 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
+		C3AEA6B0E80FCAEEFBDFF339 /* TillyCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TillyCore; path = Packages/TillyCore; sourceTree = SOURCE_ROOT; };
+		D574CAEF69385E8BFF9B7F45 /* Tilly.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tilly.entitlements; sourceTree = "<group>"; };
+		F7714F7D37E3C1AE987EAE62 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		3AE5627860B09D49516BEE44 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A197CFE0888845B000B2DC32 /* TillyCore in Frameworks */,
+				CAECE438EBA8E08CF5EC3858 /* TillyProviders in Frameworks */,
+				6AAE6F89D9A28BAF3878ABC0 /* TillyStorage in Frameworks */,
+				35953C20FEBE657284212099 /* TillyTools in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		067CCE66465E6AFF919456B7 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		1B0901C447E139602C6AEF42 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				C3AEA6B0E80FCAEEFBDFF339 /* TillyCore */,
+				317F09C0FAE8D0CEC4ACC685 /* TillyProviders */,
+				AA200997105B0DA4161B7947 /* TillyStorage */,
+				AB91B2CD9A2BF1D6165028B0 /* TillyTools */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		211C45E3B8CF87AE7B5F19EC /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		257EF4FF1812AD3DE4E90D4E /* CodeReview */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = CodeReview;
+			sourceTree = "<group>";
+		};
+		29A5E9F4AB13E90BDC36F31E /* SystemPrompt */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = SystemPrompt;
+			sourceTree = "<group>";
+		};
+		35918EFDA0B105E352EDBE97 /* Chat */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Chat;
+			sourceTree = "<group>";
+		};
+		442CF41232C5C3FB7C02EF6D /* File */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = File;
+			sourceTree = "<group>";
+		};
+		53DBE898B99A5040CDD57B4F /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A5B9530F82B4F6A90703D210 /* Chat */,
+				257EF4FF1812AD3DE4E90D4E /* CodeReview */,
+				F8805B096768835EAB78D46F /* Settings */,
+				067CCE66465E6AFF919456B7 /* Shared */,
+				AF18AA558EFB8AE0176F06ED /* Sidebar */,
+				29A5E9F4AB13E90BDC36F31E /* SystemPrompt */,
+				9A2D5E48C00DA600676E68B5 /* ContentView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		66EBD13FA996530F16905E10 /* Session */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Session;
+			sourceTree = "<group>";
+		};
+		845897DD893C6178D3BA7E4C /* Tool */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Tool;
+			sourceTree = "<group>";
+		};
+		9B3D81F9CAA5620D4E9900DA /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B56BEFD271A41F6BB08E777E /* Tilly.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A5B9530F82B4F6A90703D210 /* Chat */ = {
+			isa = PBXGroup;
+			children = (
+				3C5ED9A99FF27D0D2869F82C /* ChatView.swift */,
+				362249974F6531D337040ED5 /* InputBarView.swift */,
+				B2AE45D10BB1F0066765B9A6 /* MessageContentView.swift */,
+				8D7DB2AB7E6C97C4B5FBF5DE /* MessageView.swift */,
+			);
+			path = Chat;
+			sourceTree = "<group>";
+		};
+		AECEAFFE733EB4A3974055D6 = {
+			isa = PBXGroup;
+			children = (
+				1B0901C447E139602C6AEF42 /* Packages */,
+				D9325E5B67B037BCB5A52E93 /* Tilly */,
+				9B3D81F9CAA5620D4E9900DA /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AF18AA558EFB8AE0176F06ED /* Sidebar */ = {
+			isa = PBXGroup;
+			children = (
+				B7539F33A7EFEFEF5758F954 /* SidebarView.swift */,
+			);
+			path = Sidebar;
+			sourceTree = "<group>";
+		};
+		C72467707BC128BCBD0C2711 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				AA0391F5766AB5078D5BC063 /* AppCommands.swift */,
+				F7714F7D37E3C1AE987EAE62 /* AppState.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		C8AC643A6FE27D0327FCB9DC /* Plugin */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Plugin;
+			sourceTree = "<group>";
+		};
+		D9325E5B67B037BCB5A52E93 /* Tilly */ = {
+			isa = PBXGroup;
+			children = (
+				C72467707BC128BCBD0C2711 /* App */,
+				211C45E3B8CF87AE7B5F19EC /* Preview Content */,
+				E916DB19570033D41FDC4870 /* Services */,
+				53DBE898B99A5040CDD57B4F /* Views */,
+				71DA0E94FACD996ED7607F9C /* Assets.xcassets */,
+				D574CAEF69385E8BFF9B7F45 /* Tilly.entitlements */,
+				3A13ACCD4FBF537ADE9A0734 /* TillyApp.swift */,
+			);
+			path = Tilly;
+			sourceTree = "<group>";
+		};
+		E916DB19570033D41FDC4870 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				35918EFDA0B105E352EDBE97 /* Chat */,
+				442CF41232C5C3FB7C02EF6D /* File */,
+				C8AC643A6FE27D0327FCB9DC /* Plugin */,
+				F1EF5178FD034BF4FFAE470A /* Provider */,
+				66EBD13FA996530F16905E10 /* Session */,
+				845897DD893C6178D3BA7E4C /* Tool */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		F1EF5178FD034BF4FFAE470A /* Provider */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Provider;
+			sourceTree = "<group>";
+		};
+		F8805B096768835EAB78D46F /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				8B2F3390EB981E65499E8770 /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		184047298CD6D33481749E1D /* Tilly */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4D9B7AE1919DB29292930A1C /* Build configuration list for PBXNativeTarget "Tilly" */;
+			buildPhases = (
+				C4FD18975A4961CB474DB447 /* Sources */,
+				A35A406569F3E6BDE4F06A56 /* Resources */,
+				3AE5627860B09D49516BEE44 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Tilly;
+			packageProductDependencies = (
+				12341AC689D4CF663BEC3587 /* TillyCore */,
+				0184A2A8C2F8F70485EEEC86 /* TillyProviders */,
+				41D604BDF3CE4BE6C9C398C8 /* TillyStorage */,
+				4549431E15F91AEBCB52AA51 /* TillyTools */,
+			);
+			productName = Tilly;
+			productReference = B56BEFD271A41F6BB08E777E /* Tilly.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		754D3211ED4058A36335A5BF /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = C79505BD4A249E3D73FEF54E /* Build configuration list for PBXProject "Tilly" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = AECEAFFE733EB4A3974055D6;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				8529A3A5FE5F0D85E2B1C902 /* XCLocalSwiftPackageReference "Packages/TillyCore" */,
+				BD7A64C3389BDBF962ED199E /* XCLocalSwiftPackageReference "Packages/TillyProviders" */,
+				62391EF864431076404E93DA /* XCLocalSwiftPackageReference "Packages/TillyStorage" */,
+				5D4BC0108140644F1C8D1E5C /* XCLocalSwiftPackageReference "Packages/TillyTools" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 9B3D81F9CAA5620D4E9900DA /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				184047298CD6D33481749E1D /* Tilly */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A35A406569F3E6BDE4F06A56 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D47983A3F0BDFDB50BEF59D9 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		C4FD18975A4961CB474DB447 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				93F132421C0AFC4B42812464 /* AppCommands.swift in Sources */,
+				081117EAFF7088259E542D4A /* AppState.swift in Sources */,
+				CC717D363813E811C3EA95C9 /* ChatView.swift in Sources */,
+				C9A5EA6E59400D999D4688A4 /* ContentView.swift in Sources */,
+				ED6F4EBC715D9F5721BC5E4E /* InputBarView.swift in Sources */,
+				18634CDFD62DBD5A4571B6DD /* MessageContentView.swift in Sources */,
+				FED2CB3442AE8B004678DCE4 /* MessageView.swift in Sources */,
+				50A406395CF1EDD23D21F168 /* SettingsView.swift in Sources */,
+				4397EEF8ADF15BB331027A47 /* SidebarView.swift in Sources */,
+				947BC7FC90CE33B197B35BCA /* TillyApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		22C7AB525BCCA74DAACEA84C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Tilly/Tilly.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tilly.app;
+				PRODUCT_NAME = Tilly;
+				SDKROOT = macosx;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		5C139C2D80D63AE2E5BB99AE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Tilly/Tilly.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tilly.app;
+				PRODUCT_NAME = Tilly;
+				SDKROOT = macosx;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		7FF889C4C053045FD7162C6F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		E656571C73CFA6CBFAF032B5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		4D9B7AE1919DB29292930A1C /* Build configuration list for PBXNativeTarget "Tilly" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5C139C2D80D63AE2E5BB99AE /* Debug */,
+				22C7AB525BCCA74DAACEA84C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C79505BD4A249E3D73FEF54E /* Build configuration list for PBXProject "Tilly" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7FF889C4C053045FD7162C6F /* Debug */,
+				E656571C73CFA6CBFAF032B5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		5D4BC0108140644F1C8D1E5C /* XCLocalSwiftPackageReference "Packages/TillyTools" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/TillyTools;
+		};
+		62391EF864431076404E93DA /* XCLocalSwiftPackageReference "Packages/TillyStorage" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/TillyStorage;
+		};
+		8529A3A5FE5F0D85E2B1C902 /* XCLocalSwiftPackageReference "Packages/TillyCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/TillyCore;
+		};
+		BD7A64C3389BDBF962ED199E /* XCLocalSwiftPackageReference "Packages/TillyProviders" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/TillyProviders;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		0184A2A8C2F8F70485EEEC86 /* TillyProviders */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TillyProviders;
+		};
+		12341AC689D4CF663BEC3587 /* TillyCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TillyCore;
+		};
+		41D604BDF3CE4BE6C9C398C8 /* TillyStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TillyStorage;
+		};
+		4549431E15F91AEBCB52AA51 /* TillyTools */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TillyTools;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 754D3211ED4058A36335A5BF /* Project object */;
+}
