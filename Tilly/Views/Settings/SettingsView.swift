@@ -13,6 +13,11 @@ struct SettingsView: View {
                 .tabItem {
                     Label("Providers", systemImage: "server.rack")
                 }
+
+            RemoteSettingsView()
+                .tabItem {
+                    Label("Remote", systemImage: "iphone.and.arrow.forward")
+                }
         }
         .frame(width: 500, height: 400)
     }
@@ -168,5 +173,47 @@ struct ProviderDetailView: View {
         } catch {
             saveStatus = "Error: \(error.localizedDescription)"
         }
+    }
+}
+
+// MARK: - Remote Settings
+
+struct RemoteSettingsView: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        Form {
+            Section("iOS Remote Control Server") {
+                HStack {
+                    Circle()
+                        .fill(appState.remoteServer.isRunning ? .green : .red)
+                        .frame(width: 10, height: 10)
+                    Text(appState.remoteServer.isRunning ? "Running" : "Stopped")
+                }
+
+                LabeledContent("Port", value: "\(appState.remoteServer.port)")
+                LabeledContent("Connected Clients", value: "\(appState.remoteServer.connectedClients)")
+
+                HStack {
+                    if appState.remoteServer.isRunning {
+                        Button("Stop Server") {
+                            appState.remoteServer.stop()
+                        }
+                    } else {
+                        Button("Start Server") {
+                            appState.remoteServer.start()
+                        }
+                    }
+                }
+            }
+
+            Section("Instructions") {
+                Text("Install Tilly Remote on your iPhone. The app will automatically discover this Mac on your local network via Bonjour.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .padding()
     }
 }

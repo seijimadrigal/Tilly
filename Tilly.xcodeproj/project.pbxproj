@@ -9,14 +9,23 @@
 /* Begin PBXBuildFile section */
 		081117EAFF7088259E542D4A /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7714F7D37E3C1AE987EAE62 /* AppState.swift */; };
 		18634CDFD62DBD5A4571B6DD /* MessageContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2AE45D10BB1F0066765B9A6 /* MessageContentView.swift */; };
+		228D0C682B4DD293DBF8751E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EFCDF4FAD0857382E309F2E1 /* Assets.xcassets */; };
 		35953C20FEBE657284212099 /* TillyTools in Frameworks */ = {isa = PBXBuildFile; productRef = 4549431E15F91AEBCB52AA51 /* TillyTools */; };
 		4397EEF8ADF15BB331027A47 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7539F33A7EFEFEF5758F954 /* SidebarView.swift */; };
 		50A406395CF1EDD23D21F168 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B2F3390EB981E65499E8770 /* SettingsView.swift */; };
+		5A10D82BFAD30352F6170C9A /* TillyCore in Frameworks */ = {isa = PBXBuildFile; productRef = B64A66864A186E577D58E430 /* TillyCore */; };
+		5ED60A83B1FCB2F5577BB07F /* RemoteClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE6F207E338568AA477D13EB /* RemoteClient.swift */; };
 		6AAE6F89D9A28BAF3878ABC0 /* TillyStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 41D604BDF3CE4BE6C9C398C8 /* TillyStorage */; };
+		79BC565A6D6CB7EB2D448C7F /* TillyRemoteApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 627C01D94D3C5900E57F857D /* TillyRemoteApp.swift */; };
 		93F132421C0AFC4B42812464 /* AppCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0391F5766AB5078D5BC063 /* AppCommands.swift */; };
 		947BC7FC90CE33B197B35BCA /* TillyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A13ACCD4FBF537ADE9A0734 /* TillyApp.swift */; };
 		992B4093B0D0631990EBD38E /* MemoryBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 284A846CCC67E7D89529FE2C /* MemoryBrowserView.swift */; };
 		A197CFE0888845B000B2DC32 /* TillyCore in Frameworks */ = {isa = PBXBuildFile; productRef = 12341AC689D4CF663BEC3587 /* TillyCore */; };
+		A62C7B0C85A93C1FA7A21396 /* RemoteContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 480176AEFE0E2CE531D0FE75 /* RemoteContentView.swift */; };
+		A6E90E7E3DCB4A169EAB202A /* RemoteConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFE0B9AE798B87202DBCFDA3 /* RemoteConnectionView.swift */; };
+		C334173BBDB0A58AAB196B04 /* RemoteChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0041FC5B88A8254961BE31A0 /* RemoteChatView.swift */; };
+		C4872449BE50076281EE5670 /* RemoteServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19E5635B66911A154EABA48 /* RemoteServer.swift */; };
+		C6D43896BFA1B26F43F5545A /* RemoteSessionListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7049607340B0D863BDDE4F64 /* RemoteSessionListView.swift */; };
 		C9A5EA6E59400D999D4688A4 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A2D5E48C00DA600676E68B5 /* ContentView.swift */; };
 		CAECE438EBA8E08CF5EC3858 /* TillyProviders in Frameworks */ = {isa = PBXBuildFile; productRef = 0184A2A8C2F8F70485EEEC86 /* TillyProviders */; };
 		CC717D363813E811C3EA95C9 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C5ED9A99FF27D0D2869F82C /* ChatView.swift */; };
@@ -27,25 +36,35 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0041FC5B88A8254961BE31A0 /* RemoteChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteChatView.swift; sourceTree = "<group>"; };
+		21D2BFF89B7A7E7C9BEE38B7 /* TillyRemote.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TillyRemote.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		284A846CCC67E7D89529FE2C /* MemoryBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryBrowserView.swift; sourceTree = "<group>"; };
 		317F09C0FAE8D0CEC4ACC685 /* TillyProviders */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TillyProviders; path = Packages/TillyProviders; sourceTree = SOURCE_ROOT; };
 		362249974F6531D337040ED5 /* InputBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputBarView.swift; sourceTree = "<group>"; };
 		3A13ACCD4FBF537ADE9A0734 /* TillyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TillyApp.swift; sourceTree = "<group>"; };
 		3C5ED9A99FF27D0D2869F82C /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
+		480176AEFE0E2CE531D0FE75 /* RemoteContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteContentView.swift; sourceTree = "<group>"; };
+		627C01D94D3C5900E57F857D /* TillyRemoteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TillyRemoteApp.swift; sourceTree = "<group>"; };
 		69477CA7E4BAA8FB7123141D /* SkillBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillBrowserView.swift; sourceTree = "<group>"; };
+		7049607340B0D863BDDE4F64 /* RemoteSessionListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteSessionListView.swift; sourceTree = "<group>"; };
 		71DA0E94FACD996ED7607F9C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		8B2F3390EB981E65499E8770 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		8D7DB2AB7E6C97C4B5FBF5DE /* MessageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageView.swift; sourceTree = "<group>"; };
+		997A8B9E2CE32343B11A6DCB /* TillyRemote.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TillyRemote.entitlements; sourceTree = "<group>"; };
 		9A2D5E48C00DA600676E68B5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		AA0391F5766AB5078D5BC063 /* AppCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCommands.swift; sourceTree = "<group>"; };
 		AA200997105B0DA4161B7947 /* TillyStorage */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TillyStorage; path = Packages/TillyStorage; sourceTree = SOURCE_ROOT; };
 		AB91B2CD9A2BF1D6165028B0 /* TillyTools */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TillyTools; path = Packages/TillyTools; sourceTree = SOURCE_ROOT; };
+		AE6F207E338568AA477D13EB /* RemoteClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteClient.swift; sourceTree = "<group>"; };
 		B2AE45D10BB1F0066765B9A6 /* MessageContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageContentView.swift; sourceTree = "<group>"; };
 		B56BEFD271A41F6BB08E777E /* Tilly.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tilly.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B7539F33A7EFEFEF5758F954 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
 		C3AEA6B0E80FCAEEFBDFF339 /* TillyCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TillyCore; path = Packages/TillyCore; sourceTree = SOURCE_ROOT; };
 		D574CAEF69385E8BFF9B7F45 /* Tilly.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tilly.entitlements; sourceTree = "<group>"; };
+		E19E5635B66911A154EABA48 /* RemoteServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteServer.swift; sourceTree = "<group>"; };
+		EFCDF4FAD0857382E309F2E1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F7714F7D37E3C1AE987EAE62 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		FFE0B9AE798B87202DBCFDA3 /* RemoteConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteConnectionView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -57,6 +76,14 @@
 				CAECE438EBA8E08CF5EC3858 /* TillyProviders in Frameworks */,
 				6AAE6F89D9A28BAF3878ABC0 /* TillyStorage in Frameworks */,
 				35953C20FEBE657284212099 /* TillyTools in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		400A1E73B070E78A90BCA8E7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5A10D82BFAD30352F6170C9A /* TillyCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -93,6 +120,18 @@
 			children = (
 			);
 			path = CodeReview;
+			sourceTree = "<group>";
+		};
+		259A495355BE98BFB9316773 /* TillyRemote */ = {
+			isa = PBXGroup;
+			children = (
+				92919DD2E1C1178C02F5E34A /* Services */,
+				AE0085A10CDF9A0B6AF107D1 /* Views */,
+				EFCDF4FAD0857382E309F2E1 /* Assets.xcassets */,
+				997A8B9E2CE32343B11A6DCB /* TillyRemote.entitlements */,
+				627C01D94D3C5900E57F857D /* TillyRemoteApp.swift */,
+			);
+			path = TillyRemote;
 			sourceTree = "<group>";
 		};
 		29A5E9F4AB13E90BDC36F31E /* SystemPrompt */ = {
@@ -144,10 +183,19 @@
 			path = Tool;
 			sourceTree = "<group>";
 		};
+		92919DD2E1C1178C02F5E34A /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				AE6F207E338568AA477D13EB /* RemoteClient.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
 		9B3D81F9CAA5620D4E9900DA /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				B56BEFD271A41F6BB08E777E /* Tilly.app */,
+				21D2BFF89B7A7E7C9BEE38B7 /* TillyRemote.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -163,11 +211,23 @@
 			path = Chat;
 			sourceTree = "<group>";
 		};
+		AE0085A10CDF9A0B6AF107D1 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				0041FC5B88A8254961BE31A0 /* RemoteChatView.swift */,
+				FFE0B9AE798B87202DBCFDA3 /* RemoteConnectionView.swift */,
+				480176AEFE0E2CE531D0FE75 /* RemoteContentView.swift */,
+				7049607340B0D863BDDE4F64 /* RemoteSessionListView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
 		AECEAFFE733EB4A3974055D6 = {
 			isa = PBXGroup;
 			children = (
 				1B0901C447E139602C6AEF42 /* Packages */,
 				D9325E5B67B037BCB5A52E93 /* Tilly */,
+				259A495355BE98BFB9316773 /* TillyRemote */,
 				9B3D81F9CAA5620D4E9900DA /* Products */,
 			);
 			sourceTree = "<group>";
@@ -221,6 +281,7 @@
 				F1EF5178FD034BF4FFAE470A /* Provider */,
 				66EBD13FA996530F16905E10 /* Session */,
 				845897DD893C6178D3BA7E4C /* Tool */,
+				E19E5635B66911A154EABA48 /* RemoteServer.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -266,6 +327,26 @@
 			productReference = B56BEFD271A41F6BB08E777E /* Tilly.app */;
 			productType = "com.apple.product-type.application";
 		};
+		2CA45159B71DE18520CF286D /* TillyRemote */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 48F44AF7D2D3431DB1271F32 /* Build configuration list for PBXNativeTarget "TillyRemote" */;
+			buildPhases = (
+				0B1BC46727D0257A58219839 /* Sources */,
+				D19293E8EFAC51A86F735127 /* Resources */,
+				400A1E73B070E78A90BCA8E7 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TillyRemote;
+			packageProductDependencies = (
+				B64A66864A186E577D58E430 /* TillyCore */,
+			);
+			productName = TillyRemote;
+			productReference = 21D2BFF89B7A7E7C9BEE38B7 /* TillyRemote.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -298,6 +379,7 @@
 			projectRoot = "";
 			targets = (
 				184047298CD6D33481749E1D /* Tilly */,
+				2CA45159B71DE18520CF286D /* TillyRemote */,
 			);
 		};
 /* End PBXProject section */
@@ -311,9 +393,30 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D19293E8EFAC51A86F735127 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				228D0C682B4DD293DBF8751E /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		0B1BC46727D0257A58219839 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C334173BBDB0A58AAB196B04 /* RemoteChatView.swift in Sources */,
+				5ED60A83B1FCB2F5577BB07F /* RemoteClient.swift in Sources */,
+				A6E90E7E3DCB4A169EAB202A /* RemoteConnectionView.swift in Sources */,
+				A62C7B0C85A93C1FA7A21396 /* RemoteContentView.swift in Sources */,
+				C6D43896BFA1B26F43F5545A /* RemoteSessionListView.swift in Sources */,
+				79BC565A6D6CB7EB2D448C7F /* TillyRemoteApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C4FD18975A4961CB474DB447 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -326,6 +429,7 @@
 				992B4093B0D0631990EBD38E /* MemoryBrowserView.swift in Sources */,
 				18634CDFD62DBD5A4571B6DD /* MessageContentView.swift in Sources */,
 				FED2CB3442AE8B004678DCE4 /* MessageView.swift in Sources */,
+				C4872449BE50076281EE5670 /* RemoteServer.swift in Sources */,
 				50A406395CF1EDD23D21F168 /* SettingsView.swift in Sources */,
 				4397EEF8ADF15BB331027A47 /* SidebarView.swift in Sources */,
 				F3415953B7BEC11C7533FD5F /* SkillBrowserView.swift in Sources */,
@@ -360,6 +464,33 @@
 				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
+		};
+		3EF442895A8B9960313A5CA9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = TillyRemote/TillyRemote.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSBonjourServices = "(_tilly._tcp)";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Tilly Remote needs to discover your Mac running Tilly on the local network.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tilly.remote;
+				PRODUCT_NAME = TillyRemote;
+				SDKROOT = iphoneos;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
 		};
 		5C139C2D80D63AE2E5BB99AE /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -442,12 +573,38 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
+		};
+		E08CC1434EE5CA26A36C99CA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = TillyRemote/TillyRemote.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSBonjourServices = "(_tilly._tcp)";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Tilly Remote needs to discover your Mac running Tilly on the local network.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tilly.remote;
+				PRODUCT_NAME = TillyRemote;
+				SDKROOT = iphoneos;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
 		};
 		E656571C73CFA6CBFAF032B5 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -498,7 +655,6 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
@@ -508,6 +664,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		48F44AF7D2D3431DB1271F32 /* Build configuration list for PBXNativeTarget "TillyRemote" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3EF442895A8B9960313A5CA9 /* Debug */,
+				E08CC1434EE5CA26A36C99CA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		4D9B7AE1919DB29292930A1C /* Build configuration list for PBXNativeTarget "Tilly" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -563,6 +728,10 @@
 		4549431E15F91AEBCB52AA51 /* TillyTools */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = TillyTools;
+		};
+		B64A66864A186E577D58E430 /* TillyCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TillyCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

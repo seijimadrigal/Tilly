@@ -5,6 +5,22 @@ public final class ShellExecutor: ToolExecutable, @unchecked Sendable {
     private let defaultTimeout: TimeInterval
     private let allowedWorkingDirectory: URL?
 
+    // Patterns that indicate destructive file/disk operations
+    private static let destructivePatterns: [(regex: String, label: String)] = [
+        (#"\brm\s+-"#, "rm with flags"),
+        (#"\brm\s+[^|&;]"#, "rm (remove files)"),
+        (#"\brmdir\b"#, "rmdir (remove directory)"),
+        (#"\btrash\s"#, "trash"),
+        (#"\bunlink\s"#, "unlink"),
+        (#"\bshred\s"#, "shred"),
+        (#"\bsrm\s"#, "srm (secure remove)"),
+        (#">\s*/dev/"#, "redirect to /dev/"),
+        (#"\bmkfs\b"#, "mkfs (format filesystem)"),
+        (#"\bdiskutil\s+erase"#, "diskutil erase"),
+        (#"\bdd\s+if="#, "dd (disk dump)"),
+        (#"\bformat\s"#, "format"),
+    ]
+
     public init(
         defaultTimeout: TimeInterval = 30,
         allowedWorkingDirectory: URL? = nil
@@ -17,7 +33,7 @@ public final class ShellExecutor: ToolExecutable, @unchecked Sendable {
         ToolDefinition(
             function: ToolDefinition.FunctionDef(
                 name: "execute_command",
-                description: "Execute a shell command on the user's macOS system. Use this to run terminal commands, install packages, compile code, run scripts, manage files, check system status, or perform any operation available from the command line. Commands run in /bin/zsh. You can chain commands with && or ;. Returns stdout, stderr, and exit code.",
+                description: "Execute a shell command on the user's macOS system. Use this to run terminal commands, install packages, compile code, run scripts, manage files, check system status, or perform any operation available from the command line. Commands run in /bin/zsh. You can chain commands with && or ;. Returns stdout, stderr, and exit code. IMPORTANT: For commands that delete files (rm, trash, etc.), you MUST first use ask_user to get permission, then pass confirmed: true.",
                 parameters: .object([
                     "type": .string("object"),
                     "properties": .object([
@@ -33,6 +49,10 @@ public final class ShellExecutor: ToolExecutable, @unchecked Sendable {
                             "type": .string("number"),
                             "description": .string("Optional timeout in seconds. Defaults to 30."),
                         ]),
+                        "confirmed": .object([
+                            "type": .string("boolean"),
+                            "description": .string("Set to true ONLY after you have used ask_user to get explicit permission for a destructive command (rm, trash, etc.). Required to run file-deletion commands."),
+                        ]),
                     ]),
                     "required": .array([.string("command")]),
                 ])
@@ -45,6 +65,7 @@ public final class ShellExecutor: ToolExecutable, @unchecked Sendable {
             let command: String
             let working_directory: String?
             let timeout: Double?
+            let confirmed: Bool?
         }
 
         guard let data = arguments.data(using: .utf8) else {
@@ -52,11 +73,44 @@ public final class ShellExecutor: ToolExecutable, @unchecked Sendable {
         }
 
         let args = try JSONDecoder().decode(Args.self, from: data)
+
+        // Safety check: block destructive commands unless explicitly confirmed
+        if args.confirmed != true {
+            if let match = Self.isDestructive(args.command) {
+                return ToolResult(
+                    content: """
+                    BLOCKED: This command contains '\(match)' which could delete or destroy files/data.
+
+                    For safety, you MUST:
+                    1. Use the ask_user tool to show the user what you want to delete and get their permission
+                    2. Then retry this command with "confirmed": true
+
+                    Do NOT skip this step. The user's files must be protected.
+                    """,
+                    isError: true
+                )
+            }
+        }
+
         return await runCommand(
             args.command,
             workingDirectory: args.working_directory,
             timeout: args.timeout ?? defaultTimeout
         )
+    }
+
+    /// Returns the matched destructive pattern label, or nil if command is safe.
+    private static func isDestructive(_ command: String) -> String? {
+        let lowered = command.lowercased()
+        for (pattern, label) in destructivePatterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) {
+                let range = NSRange(lowered.startIndex..., in: lowered)
+                if regex.firstMatch(in: lowered, range: range) != nil {
+                    return label
+                }
+            }
+        }
+        return nil
     }
 
     private func runCommand(
@@ -81,7 +135,6 @@ public final class ShellExecutor: ToolExecutable, @unchecked Sendable {
             process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
         }
 
-        // Inherit PATH and common environment
         var env = ProcessInfo.processInfo.environment
         env["TERM"] = "xterm-256color"
         process.environment = env
@@ -95,7 +148,6 @@ public final class ShellExecutor: ToolExecutable, @unchecked Sendable {
             )
         }
 
-        // Timeout handling
         let timeoutTask = Task {
             try await Task.sleep(for: .seconds(timeout))
             if process.isRunning {
@@ -127,7 +179,6 @@ public final class ShellExecutor: ToolExecutable, @unchecked Sendable {
 
         output += "\n[exit code: \(exitCode)]"
 
-        // Truncate very long output
         let maxLength = 10000
         if output.count > maxLength {
             output = String(output.prefix(maxLength)) + "\n... [output truncated at \(maxLength) chars]"

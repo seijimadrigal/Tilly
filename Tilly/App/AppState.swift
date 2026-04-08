@@ -32,6 +32,10 @@ final class AppState {
     var toolsEnabled: Bool = true
     private let maxToolRounds = 15
 
+    // MARK: - Remote Control
+    let remoteServer = RemoteServer()
+    var onStreamDelta: ((String) -> Void)?
+
     // MARK: - Services
     let keychainService = KeychainService()
     let memoryService = MemoryService()
@@ -45,8 +49,20 @@ final class AppState {
             skillService: skillService
         )
         setupAskUserHandler()
+        setupRemoteServer()
         initializeProviders()
         loadSessions()
+    }
+
+    private func setupRemoteServer() {
+        remoteServer.appState = self
+        remoteServer.start()
+        // Bridge streaming deltas to connected iOS clients
+        onStreamDelta = { [weak self] delta in
+            self?.remoteServer.broadcast(
+                RemoteMessage(type: .streamDelta, text: delta)
+            )
+        }
     }
 
     // MARK: - Ask User Handler
@@ -187,11 +203,19 @@ final class AppState {
 
         isStreaming = false
 
-        // Auto-generate title from first exchange
-        if session.messages.count <= 4 && session.title == "New Chat" {
-            let title = String(text.prefix(50))
-            session.title = title.count < text.count ? title + "..." : title
-            updateCurrentSession(session)
+        // Notify remote clients that streaming is done
+        remoteServer.broadcast(RemoteMessage(type: .streamEnd))
+        if let session = currentSession {
+            remoteServer.broadcast(RemoteMessage(type: .fullSession, session: session))
+        }
+
+        // Auto-generate title via LLM after first exchange
+        if session.title == "New Chat" &&
+           session.messages.contains(where: { $0.role == .assistant && !$0.textContent.isEmpty }) {
+            let sid = session.id
+            Task { @MainActor [weak self] in
+                await self?.generateSessionTitle(sessionID: sid)
+            }
         }
     }
 
@@ -263,6 +287,7 @@ final class AppState {
                 assistantMessage.content = [.text(accumulatedText)]
                 session.messages[assistantIndex] = assistantMessage
                 updateCurrentSession(session)
+                onStreamDelta?(content)
             }
 
             if let reasoning = choice.delta.reasoningContent {
@@ -341,6 +366,67 @@ final class AppState {
     func stopStreaming() {
         isStreaming = false
         streamTask?.cancel()
+    }
+
+    // MARK: - Session Title Generation
+
+    private func generateSessionTitle(sessionID: UUID) async {
+        guard let provider = currentProvider,
+              let idx = sessions.firstIndex(where: { $0.id == sessionID }) else { return }
+
+        let session = sessions[idx]
+
+        // Collect first few messages for context
+        let relevantMessages = session.messages.prefix(4).compactMap { msg -> ChatCompletionRequest.ChatMessage? in
+            guard msg.role == .user || msg.role == .assistant else { return nil }
+            let text = String(msg.textContent.prefix(200))
+            guard !text.isEmpty else { return nil }
+            return ChatCompletionRequest.ChatMessage(role: msg.role.rawValue, content: text)
+        }
+
+        guard !relevantMessages.isEmpty else { return }
+
+        var titleMessages: [ChatCompletionRequest.ChatMessage] = [
+            ChatCompletionRequest.ChatMessage(
+                role: "system",
+                content: "Generate a short title (4-7 words) for this conversation. Return ONLY the title text, nothing else. No quotes. No punctuation at the end."
+            )
+        ]
+        titleMessages.append(contentsOf: relevantMessages)
+
+        let request = ChatCompletionRequest(
+            model: selectedModelID,
+            messages: titleMessages,
+            temperature: 0.3,
+            maxTokens: 30,
+            stream: false,
+            streamOptions: nil,
+            tools: nil
+        )
+
+        do {
+            let response = try await provider.complete(request)
+            if let title = response.choices.first?.message.content?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .trimmingCharacters(in: CharacterSet(charactersIn: "\"")),
+               !title.isEmpty {
+                sessions[idx].title = String(title.prefix(60))
+                if currentSession?.id == sessionID {
+                    currentSession = sessions[idx]
+                }
+                sessionService.save(sessions[idx])
+            }
+        } catch {
+            // Fallback: use first user message truncated
+            if let firstText = session.messages.first(where: { $0.role == .user })?.textContent {
+                let fallback = String(firstText.prefix(50))
+                sessions[idx].title = fallback.count < firstText.count ? fallback + "..." : fallback
+                if currentSession?.id == sessionID {
+                    currentSession = sessions[idx]
+                }
+                sessionService.save(sessions[idx])
+            }
+        }
     }
 
     // MARK: - Message Building

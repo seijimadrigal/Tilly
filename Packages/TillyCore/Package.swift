@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "TillyCore",
-    platforms: [.macOS(.v15)],
+    platforms: [.macOS(.v15), .iOS(.v17)],
     products: [
         .library(name: "TillyCore", targets: ["TillyCore"]),
     ],
