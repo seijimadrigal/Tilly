@@ -5,6 +5,9 @@ import TillyStorage
 public final class ToolRegistry: @unchecked Sendable {
     private var tools: [String: any ToolExecutable] = [:]
 
+    /// The ask_user tool instance, exposed so the UI can set its handler.
+    public private(set) var askUserTool: AskUserTool?
+
     public init() {}
 
     public func register(_ tool: any ToolExecutable) {
@@ -48,6 +51,11 @@ public final class ToolRegistry: @unchecked Sendable {
         registry.register(SkillListTool(service: skillService))
         registry.register(SkillRunTool(service: skillService))
         registry.register(SkillDeleteTool(service: skillService))
+
+        // User interaction
+        let askUser = AskUserTool()
+        registry.register(askUser)
+        registry.askUserTool = askUser
 
         return registry
     }

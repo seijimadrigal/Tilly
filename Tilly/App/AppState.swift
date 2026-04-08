@@ -21,15 +21,22 @@ final class AppState {
     var isStreaming: Bool = false
     private var streamTask: Task<Void, Never>?
 
+    // MARK: - Ask User Dialog State
+    var showAskUserDialog: Bool = false
+    var askUserQuestion: String = ""
+    var askUserOptions: [String] = []
+    private var askUserContinuation: CheckedContinuation<String, Never>?
+
     // MARK: - Tools
     let toolRegistry: ToolRegistry
     var toolsEnabled: Bool = true
-    private let maxToolRounds = 10  // Safety limit on consecutive tool call rounds
+    private let maxToolRounds = 15
 
     // MARK: - Services
     let keychainService = KeychainService()
     let memoryService = MemoryService()
     let skillService = SkillService()
+    let sessionService = SessionService()
     private var providers: [ProviderID: any LLMProvider] = [:]
 
     init() {
@@ -37,8 +44,33 @@ final class AppState {
             memoryService: memoryService,
             skillService: skillService
         )
+        setupAskUserHandler()
         initializeProviders()
-        createNewSession()
+        loadSessions()
+    }
+
+    // MARK: - Ask User Handler
+
+    private func setupAskUserHandler() {
+        toolRegistry.askUserTool?.handler = { [weak self] question, options in
+            guard let self else { return "Proceed with best judgment" }
+            return await self.showAskUserPopup(question: question, options: options)
+        }
+    }
+
+    private func showAskUserPopup(question: String, options: [String]) async -> String {
+        return await withCheckedContinuation { continuation in
+            self.askUserQuestion = question
+            self.askUserOptions = options
+            self.askUserContinuation = continuation
+            self.showAskUserDialog = true
+        }
+    }
+
+    func respondToAskUser(choice: String) {
+        showAskUserDialog = false
+        askUserContinuation?.resume(returning: choice)
+        askUserContinuation = nil
     }
 
     // MARK: - Provider Access
@@ -78,7 +110,17 @@ final class AppState {
         }
     }
 
-    // MARK: - Session Management
+    // MARK: - Session Management (with persistence)
+
+    func loadSessions() {
+        let loaded = sessionService.loadAll()
+        if loaded.isEmpty {
+            createNewSession()
+        } else {
+            sessions = loaded
+            currentSession = sessions.first
+        }
+    }
 
     func createNewSession() {
         let session = Session(
@@ -91,6 +133,7 @@ final class AppState {
         )
         sessions.insert(session, at: 0)
         currentSession = session
+        sessionService.save(session)
     }
 
     func selectSession(_ session: Session) {
@@ -99,8 +142,12 @@ final class AppState {
 
     func deleteSession(_ session: Session) {
         sessions.removeAll { $0.id == session.id }
+        sessionService.delete(session.id)
         if currentSession?.id == session.id {
             currentSession = sessions.first
+            if currentSession == nil {
+                createNewSession()
+            }
         }
     }
 
@@ -109,6 +156,8 @@ final class AppState {
         if let index = sessions.firstIndex(where: { $0.id == session.id }) {
             sessions[index] = session
         }
+        // Auto-persist to disk
+        sessionService.save(session)
     }
 
     // MARK: - Chat with Agent Loop
@@ -148,7 +197,7 @@ final class AppState {
 
     /// The core agent loop: stream -> detect tool calls -> execute -> repeat
     private func runAgentLoop(session: inout Session, provider: any LLMProvider) async throws {
-        for round in 0..<maxToolRounds {
+        for _ in 0..<maxToolRounds {
             let chatMessages = buildChatMessages(from: session)
             let tools = toolsEnabled ? toolRegistry.definitions : nil
 
@@ -165,13 +214,10 @@ final class AppState {
                 session: &session
             )
 
-            // If the model returned tool calls, execute them and loop
             if !result.toolCalls.isEmpty {
-                // Execute all tool calls
                 for toolCall in result.toolCalls {
                     let toolResult = await executeToolCall(toolCall)
 
-                    // Add tool result message to session
                     let toolMessage = Message(
                         role: .tool,
                         content: [.text(toolResult.content)],
@@ -180,12 +226,9 @@ final class AppState {
                     session.appendMessage(toolMessage)
                     updateCurrentSession(session)
                 }
-
-                // Continue the loop so the model can see tool results
                 continue
             }
 
-            // No tool calls - the model is done
             break
         }
     }
@@ -202,7 +245,6 @@ final class AppState {
         var finishReason: String?
         let startTime = Date()
 
-        // Create assistant message placeholder
         var assistantMessage = Message(role: .assistant, content: [.text("")])
         session.appendMessage(assistantMessage)
         updateCurrentSession(session)
@@ -216,7 +258,6 @@ final class AppState {
                 continue
             }
 
-            // Accumulate text content
             if let content = choice.delta.content {
                 accumulatedText += content
                 assistantMessage.content = [.text(accumulatedText)]
@@ -224,16 +265,13 @@ final class AppState {
                 updateCurrentSession(session)
             }
 
-            // Accumulate reasoning content (DeepSeek)
             if let reasoning = choice.delta.reasoningContent {
-                // Show reasoning in a separate block or prefix
                 accumulatedText += reasoning
                 assistantMessage.content = [.text(accumulatedText)]
                 session.messages[assistantIndex] = assistantMessage
                 updateCurrentSession(session)
             }
 
-            // Accumulate tool call deltas
             if let toolCallDeltas = choice.delta.toolCalls {
                 for tcd in toolCallDeltas {
                     let key = "\(tcd.index)"
@@ -261,7 +299,6 @@ final class AppState {
             }
         }
 
-        // Build final tool calls
         let toolCalls = accumulatedToolCalls.sorted(by: { $0.key < $1.key }).map { (_, acc) in
             ToolCall(
                 id: acc.id,
@@ -269,7 +306,6 @@ final class AppState {
             )
         }
 
-        // Finalize assistant message
         let latency = Int(Date().timeIntervalSince(startTime) * 1000)
         assistantMessage.metadata = MessageMetadata(
             model: selectedModelID,
@@ -291,7 +327,6 @@ final class AppState {
         )
     }
 
-    /// Execute a single tool call and return the result.
     private func executeToolCall(_ toolCall: ToolCall) async -> ToolResult {
         do {
             return try await toolRegistry.execute(toolCall: toolCall)
@@ -313,7 +348,6 @@ final class AppState {
     private func buildChatMessages(from session: Session) -> [ChatCompletionRequest.ChatMessage] {
         var messages: [ChatCompletionRequest.ChatMessage] = []
 
-        // System prompt (rebuilt dynamically to include latest memory/skill context)
         let dynamicPrompt = buildDynamicSystemPrompt()
         messages.append(ChatCompletionRequest.ChatMessage(
             role: "system",
@@ -373,62 +407,65 @@ final class AppState {
         ## Core Tools
 
         ### execute_command
-        Run any shell command on macOS via /bin/zsh. Use for terminal commands, installing packages, compiling code, git operations, system administration.
+        Run any shell command on macOS via /bin/zsh.
 
         ### open_application
-        Open macOS applications, files, or URLs. Use for launching apps (Finder, Safari, Xcode, etc.), opening files, or URLs.
+        Open macOS applications, files, or URLs.
 
         ### read_file
-        Read file contents. Supports line ranges for large files.
+        Read file contents with optional line range.
 
         ### write_file
-        Write or append to files. Creates parent directories automatically.
+        Write or append to files.
 
         ### list_directory
-        List directory contents, optionally recursive.
+        List directory contents.
 
         ### web_fetch
         Fetch and read web page content.
 
         ## Memory System
 
-        You have persistent memory that survives across sessions. Use it proactively:
+        You have persistent memory that survives across sessions.
 
-        - **memory_store**: Save important information (user preferences, project context, what works/doesn't)
+        - **memory_store**: Save information (user preferences, project context, feedback)
         - **memory_search**: Search memories by keyword or type
         - **memory_list**: See all stored memories
         - **memory_delete**: Remove outdated memories
 
-        Memory types: `user` (about the person), `feedback` (how they want you to work), `project` (current work context), `reference` (where to find things).
+        Memory types: `user`, `feedback`, `project`, `reference`.
 
-        **Save memories when you learn something worth remembering.** Don't wait to be asked.
+        **IMPORTANT: Proactively save memories when you learn something about the user, their preferences, their projects, or receive feedback. Do this automatically without being asked.**
 
         ### Known Memories
         \(memoryIndex)
 
         ## Skill Library
 
-        Skills are saved workflows you can create and reuse:
-
-        - **skill_create**: Save a new reusable workflow
+        - **skill_create**: Save a reusable workflow
         - **skill_run**: Execute a saved skill
         - **skill_list**: See available skills
         - **skill_delete**: Remove a skill
 
-        **Create skills when you discover a useful multi-step workflow** the user might want to repeat.
-
         ### Available Skills
         \(skillIndex)
 
+        ## Ask User
+
+        - **ask_user**: When you are unsure how to proceed, use this tool to ask the user a question with 3 options. Use this for:
+          - Ambiguous requests where multiple approaches are possible
+          - Before destructive or irreversible actions
+          - When you need user preference or confirmation
+          - When a task could go multiple directions
+
         ## Guidelines
 
-        1. **Be proactive with tools.** Actually do things, don't just explain how.
-        2. **Use memory.** When you learn user preferences, project patterns, or useful context - save it. When starting a task, check your memories.
-        3. **Create skills.** When you complete a multi-step workflow the user might want again, offer to save it as a skill.
-        4. **Read before modifying.** Always read files before editing them.
-        5. **Handle errors gracefully.** If something fails, try an alternative.
-        6. **Chain operations.** Break complex tasks into tool call steps.
-        7. **Respect the system.** No destructive commands without explicit confirmation.
+        1. **Be proactive with tools.** Actually do things, don't explain how.
+        2. **Save memories automatically.** When you learn something worth remembering, use memory_store immediately.
+        3. **Ask when unsure.** Use ask_user when you face ambiguity or need confirmation.
+        4. **Read before modifying.** Always read files before editing.
+        5. **Handle errors gracefully.** Try alternatives on failure.
+        6. **No destructive commands without confirmation.** Use ask_user first.
         """
     }
 }
