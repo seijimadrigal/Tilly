@@ -1,5 +1,6 @@
 import Foundation
 import TillyCore
+import TillyStorage
 
 public final class ToolRegistry: @unchecked Sendable {
     private var tools: [String: any ToolExecutable] = [:]
@@ -22,14 +23,32 @@ public final class ToolRegistry: @unchecked Sendable {
     }
 
     /// Creates a registry with all built-in tools pre-registered.
-    public static func withBuiltinTools() -> ToolRegistry {
+    public static func withBuiltinTools(
+        memoryService: MemoryService = MemoryService(),
+        skillService: SkillService = SkillService()
+    ) -> ToolRegistry {
         let registry = ToolRegistry()
+
+        // Core tools
         registry.register(ShellExecutor())
         registry.register(AppLauncher())
         registry.register(FileReadTool())
         registry.register(FileWriteTool())
         registry.register(DirectoryListTool())
         registry.register(WebFetchTool())
+
+        // Memory tools
+        registry.register(MemoryStoreTool(service: memoryService))
+        registry.register(MemorySearchTool(service: memoryService))
+        registry.register(MemoryListTool(service: memoryService))
+        registry.register(MemoryDeleteTool(service: memoryService))
+
+        // Skill tools
+        registry.register(SkillCreateTool(service: skillService))
+        registry.register(SkillListTool(service: skillService))
+        registry.register(SkillRunTool(service: skillService))
+        registry.register(SkillDeleteTool(service: skillService))
+
         return registry
     }
 }

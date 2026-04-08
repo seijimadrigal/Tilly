@@ -9,9 +9,10 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../TillyCore"),
+        .package(path: "../TillyStorage"),
     ],
     targets: [
-        .target(name: "TillyTools", dependencies: ["TillyCore"]),
+        .target(name: "TillyTools", dependencies: ["TillyCore", "TillyStorage"]),
         .testTarget(name: "TillyToolsTests", dependencies: ["TillyTools"]),
     ]
 )

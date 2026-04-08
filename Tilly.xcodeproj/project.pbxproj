@@ -15,20 +15,24 @@
 		6AAE6F89D9A28BAF3878ABC0 /* TillyStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 41D604BDF3CE4BE6C9C398C8 /* TillyStorage */; };
 		93F132421C0AFC4B42812464 /* AppCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0391F5766AB5078D5BC063 /* AppCommands.swift */; };
 		947BC7FC90CE33B197B35BCA /* TillyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A13ACCD4FBF537ADE9A0734 /* TillyApp.swift */; };
+		992B4093B0D0631990EBD38E /* MemoryBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 284A846CCC67E7D89529FE2C /* MemoryBrowserView.swift */; };
 		A197CFE0888845B000B2DC32 /* TillyCore in Frameworks */ = {isa = PBXBuildFile; productRef = 12341AC689D4CF663BEC3587 /* TillyCore */; };
 		C9A5EA6E59400D999D4688A4 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A2D5E48C00DA600676E68B5 /* ContentView.swift */; };
 		CAECE438EBA8E08CF5EC3858 /* TillyProviders in Frameworks */ = {isa = PBXBuildFile; productRef = 0184A2A8C2F8F70485EEEC86 /* TillyProviders */; };
 		CC717D363813E811C3EA95C9 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C5ED9A99FF27D0D2869F82C /* ChatView.swift */; };
 		D47983A3F0BDFDB50BEF59D9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 71DA0E94FACD996ED7607F9C /* Assets.xcassets */; };
 		ED6F4EBC715D9F5721BC5E4E /* InputBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362249974F6531D337040ED5 /* InputBarView.swift */; };
+		F3415953B7BEC11C7533FD5F /* SkillBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69477CA7E4BAA8FB7123141D /* SkillBrowserView.swift */; };
 		FED2CB3442AE8B004678DCE4 /* MessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D7DB2AB7E6C97C4B5FBF5DE /* MessageView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		284A846CCC67E7D89529FE2C /* MemoryBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryBrowserView.swift; sourceTree = "<group>"; };
 		317F09C0FAE8D0CEC4ACC685 /* TillyProviders */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TillyProviders; path = Packages/TillyProviders; sourceTree = SOURCE_ROOT; };
 		362249974F6531D337040ED5 /* InputBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputBarView.swift; sourceTree = "<group>"; };
 		3A13ACCD4FBF537ADE9A0734 /* TillyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TillyApp.swift; sourceTree = "<group>"; };
 		3C5ED9A99FF27D0D2869F82C /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
+		69477CA7E4BAA8FB7123141D /* SkillBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillBrowserView.swift; sourceTree = "<group>"; };
 		71DA0E94FACD996ED7607F9C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		8B2F3390EB981E65499E8770 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		8D7DB2AB7E6C97C4B5FBF5DE /* MessageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageView.swift; sourceTree = "<group>"; };
@@ -171,7 +175,9 @@
 		AF18AA558EFB8AE0176F06ED /* Sidebar */ = {
 			isa = PBXGroup;
 			children = (
+				284A846CCC67E7D89529FE2C /* MemoryBrowserView.swift */,
 				B7539F33A7EFEFEF5758F954 /* SidebarView.swift */,
+				69477CA7E4BAA8FB7123141D /* SkillBrowserView.swift */,
 			);
 			path = Sidebar;
 			sourceTree = "<group>";
@@ -317,10 +323,12 @@
 				CC717D363813E811C3EA95C9 /* ChatView.swift in Sources */,
 				C9A5EA6E59400D999D4688A4 /* ContentView.swift in Sources */,
 				ED6F4EBC715D9F5721BC5E4E /* InputBarView.swift in Sources */,
+				992B4093B0D0631990EBD38E /* MemoryBrowserView.swift in Sources */,
 				18634CDFD62DBD5A4571B6DD /* MessageContentView.swift in Sources */,
 				FED2CB3442AE8B004678DCE4 /* MessageView.swift in Sources */,
 				50A406395CF1EDD23D21F168 /* SettingsView.swift in Sources */,
 				4397EEF8ADF15BB331027A47 /* SidebarView.swift in Sources */,
+				F3415953B7BEC11C7533FD5F /* SkillBrowserView.swift in Sources */,
 				947BC7FC90CE33B197B35BCA /* TillyApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

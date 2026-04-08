@@ -1,8 +1,23 @@
 import SwiftUI
 import TillyCore
 
+enum SidebarTab: String, CaseIterable {
+    case sessions = "Sessions"
+    case memories = "Memories"
+    case skills = "Skills"
+
+    var icon: String {
+        switch self {
+        case .sessions: return "bubble.left.and.bubble.right"
+        case .memories: return "brain"
+        case .skills: return "sparkles"
+        }
+    }
+}
+
 struct SidebarView: View {
     @Environment(AppState.self) private var appState
+    @State private var selectedTab: SidebarTab = .sessions
 
     var body: some View {
         @Bindable var state = appState
@@ -40,38 +55,37 @@ struct SidebarView: View {
 
             Divider()
 
-            // Session List
-            List(selection: Binding(
-                get: { appState.currentSession?.id },
-                set: { id in
-                    if let id, let session = appState.sessions.first(where: { $0.id == id }) {
-                        appState.selectSession(session)
-                    }
-                }
-            )) {
-                ForEach(appState.sessions) { session in
-                    SessionRowView(session: session)
-                        .tag(session.id)
-                        .contextMenu {
-                            Button("Delete", role: .destructive) {
-                                appState.deleteSession(session)
-                            }
-                        }
+            // Tab picker
+            Picker("", selection: $selectedTab) {
+                ForEach(SidebarTab.allCases, id: \.self) { tab in
+                    Label(tab.rawValue, systemImage: tab.icon).tag(tab)
                 }
             }
-            .listStyle(.sidebar)
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+
+            // Tab content
+            switch selectedTab {
+            case .sessions:
+                sessionsList
+            case .memories:
+                MemoryBrowserView()
+            case .skills:
+                SkillBrowserView()
+            }
         }
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 Button {
                     appState.createNewSession()
+                    selectedTab = .sessions
                 } label: {
                     Label("New Chat", systemImage: "plus")
                 }
             }
         }
         .onChange(of: appState.selectedProviderID) {
-            // Update default model for the selected provider
             if let config = appState.providerConfigs.first(where: { $0.providerID == appState.selectedProviderID }),
                let defaultModel = config.defaultModel {
                 appState.selectedModelID = defaultModel
@@ -83,6 +97,28 @@ struct SidebarView: View {
         .task {
             await appState.loadModels()
         }
+    }
+
+    private var sessionsList: some View {
+        List(selection: Binding(
+            get: { appState.currentSession?.id },
+            set: { id in
+                if let id, let session = appState.sessions.first(where: { $0.id == id }) {
+                    appState.selectSession(session)
+                }
+            }
+        )) {
+            ForEach(appState.sessions) { session in
+                SessionRowView(session: session)
+                    .tag(session.id)
+                    .contextMenu {
+                        Button("Delete", role: .destructive) {
+                            appState.deleteSession(session)
+                        }
+                    }
+            }
+        }
+        .listStyle(.sidebar)
     }
 }
 

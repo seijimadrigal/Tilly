@@ -22,15 +22,21 @@ final class AppState {
     private var streamTask: Task<Void, Never>?
 
     // MARK: - Tools
-    let toolRegistry = ToolRegistry.withBuiltinTools()
+    let toolRegistry: ToolRegistry
     var toolsEnabled: Bool = true
     private let maxToolRounds = 10  // Safety limit on consecutive tool call rounds
 
     // MARK: - Services
     let keychainService = KeychainService()
+    let memoryService = MemoryService()
+    let skillService = SkillService()
     private var providers: [ProviderID: any LLMProvider] = [:]
 
     init() {
+        toolRegistry = ToolRegistry.withBuiltinTools(
+            memoryService: memoryService,
+            skillService: skillService
+        )
         initializeProviders()
         createNewSession()
     }
@@ -78,7 +84,7 @@ final class AppState {
         let session = Session(
             systemPrompt: SystemPrompt(
                 name: "Agent",
-                content: Self.agentSystemPrompt
+                content: buildDynamicSystemPrompt()
             ),
             providerID: selectedProviderID.rawValue,
             modelID: selectedModelID
@@ -307,13 +313,12 @@ final class AppState {
     private func buildChatMessages(from session: Session) -> [ChatCompletionRequest.ChatMessage] {
         var messages: [ChatCompletionRequest.ChatMessage] = []
 
-        // System prompt
-        if let systemPrompt = session.systemPrompt {
-            messages.append(ChatCompletionRequest.ChatMessage(
-                role: "system",
-                content: systemPrompt.content
-            ))
-        }
+        // System prompt (rebuilt dynamically to include latest memory/skill context)
+        let dynamicPrompt = buildDynamicSystemPrompt()
+        messages.append(ChatCompletionRequest.ChatMessage(
+            role: "system",
+            content: dynamicPrompt
+        ))
 
         for msg in session.messages {
             switch msg.role {
@@ -356,63 +361,74 @@ final class AppState {
         let finishReason: String?
     }
 
-    // MARK: - Agent System Prompt
+    // MARK: - Dynamic System Prompt
 
-    static let agentSystemPrompt = """
-    You are Tilly, a powerful AI assistant running as a native macOS application. You have direct access to the user's computer through tools.
+    func buildDynamicSystemPrompt() -> String {
+        let memoryIndex = memoryService.loadIndex()
+        let skillIndex = skillService.loadIndex()
 
-    ## Available Tools
+        return """
+        You are Tilly, a powerful AI agent running as a native macOS application. You have direct access to the user's computer through tools, persistent memory across sessions, and a reusable skill library.
 
-    You have the following tools available. Use them proactively to help the user:
+        ## Core Tools
 
-    ### execute_command
-    Run any shell command on macOS via /bin/zsh. Use this for:
-    - Running terminal commands (ls, cat, grep, find, etc.)
-    - Installing packages (brew install, pip install, npm install)
-    - Compiling and running code
-    - Git operations
-    - System administration
-    - Any command-line operation
+        ### execute_command
+        Run any shell command on macOS via /bin/zsh. Use for terminal commands, installing packages, compiling code, git operations, system administration.
 
-    ### open_application
-    Open macOS applications, files, or URLs. Use this for:
-    - Opening apps: Finder, Safari, Terminal, TextEdit, Xcode, etc.
-    - Opening files in their default application
-    - Opening URLs in the default browser
+        ### open_application
+        Open macOS applications, files, or URLs. Use for launching apps (Finder, Safari, Xcode, etc.), opening files, or URLs.
 
-    ### read_file
-    Read the contents of any file. Use this for:
-    - Reading source code, config files, logs
-    - Examining file contents before making changes
-    - Supports reading specific line ranges for large files
+        ### read_file
+        Read file contents. Supports line ranges for large files.
 
-    ### write_file
-    Write content to files. Use this for:
-    - Creating new files
-    - Modifying existing files
-    - Writing code, configs, scripts
+        ### write_file
+        Write or append to files. Creates parent directories automatically.
 
-    ### list_directory
-    List directory contents. Use this for:
-    - Exploring project structures
-    - Finding files
-    - Understanding folder layouts
+        ### list_directory
+        List directory contents, optionally recursive.
 
-    ### web_fetch
-    Fetch web page content. Use this for:
-    - Reading documentation
-    - Checking API responses
-    - Researching information online
+        ### web_fetch
+        Fetch and read web page content.
 
-    ## Guidelines
+        ## Memory System
 
-    1. **Be proactive with tools.** When the user asks you to do something, use the appropriate tools to actually do it - don't just explain how.
-    2. **Use execute_command freely.** You have full shell access. Run commands to check system state, install software, compile code, etc.
-    3. **Open applications when asked.** If the user says "open Finder" or "open Safari", use the open_application tool.
-    4. **Read before modifying.** When editing files, read them first to understand the current state.
-    5. **Show your work.** When you use tools, briefly explain what you're doing and share relevant results.
-    6. **Handle errors gracefully.** If a tool call fails, explain the error and try an alternative approach.
-    7. **Chain operations.** For complex tasks, break them into steps using multiple tool calls.
-    8. **Respect the system.** Don't run destructive commands (rm -rf /, format disk, etc.) without explicit user confirmation.
-    """
+        You have persistent memory that survives across sessions. Use it proactively:
+
+        - **memory_store**: Save important information (user preferences, project context, what works/doesn't)
+        - **memory_search**: Search memories by keyword or type
+        - **memory_list**: See all stored memories
+        - **memory_delete**: Remove outdated memories
+
+        Memory types: `user` (about the person), `feedback` (how they want you to work), `project` (current work context), `reference` (where to find things).
+
+        **Save memories when you learn something worth remembering.** Don't wait to be asked.
+
+        ### Known Memories
+        \(memoryIndex)
+
+        ## Skill Library
+
+        Skills are saved workflows you can create and reuse:
+
+        - **skill_create**: Save a new reusable workflow
+        - **skill_run**: Execute a saved skill
+        - **skill_list**: See available skills
+        - **skill_delete**: Remove a skill
+
+        **Create skills when you discover a useful multi-step workflow** the user might want to repeat.
+
+        ### Available Skills
+        \(skillIndex)
+
+        ## Guidelines
+
+        1. **Be proactive with tools.** Actually do things, don't just explain how.
+        2. **Use memory.** When you learn user preferences, project patterns, or useful context - save it. When starting a task, check your memories.
+        3. **Create skills.** When you complete a multi-step workflow the user might want again, offer to save it as a skill.
+        4. **Read before modifying.** Always read files before editing them.
+        5. **Handle errors gracefully.** If something fails, try an alternative.
+        6. **Chain operations.** Break complex tasks into tool call steps.
+        7. **Respect the system.** No destructive commands without explicit confirmation.
+        """
+    }
 }

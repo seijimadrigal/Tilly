@@ -17,6 +17,9 @@ public enum TillyError: Error, LocalizedError, Sendable {
     case networkError(Error)
     case timeout
     case cancelled
+    case memoryNotFound(String)
+    case skillNotFound(String)
+    case invalidMemoryType(String)
 
     public var errorDescription: String? {
         switch self {
@@ -55,6 +58,12 @@ public enum TillyError: Error, LocalizedError, Sendable {
             return "Request timed out"
         case .cancelled:
             return "Request cancelled"
+        case .memoryNotFound(let name):
+            return "Memory not found: \(name)"
+        case .skillNotFound(let name):
+            return "Skill not found: \(name)"
+        case .invalidMemoryType(let type):
+            return "Invalid memory type: \(type). Use: user, feedback, project, reference"
         }
     }
 
