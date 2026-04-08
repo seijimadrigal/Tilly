@@ -10,8 +10,8 @@ import TillyTools
 final class AppState {
     // MARK: - Provider Management
     var providerConfigs: [ProviderConfiguration] = ProviderConfiguration.defaults
-    var selectedProviderID: ProviderID = .ollama
-    var selectedModelID: String = "llama3.2"
+    var selectedProviderID: ProviderID = .zaiCoding
+    var selectedModelID: String = "glm-4-flash"
     var availableModels: [ModelInfo] = []
     var isLoadingModels: Bool = false
 

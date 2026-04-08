@@ -19,6 +19,8 @@ public enum ProviderFactory {
             return MoonshotProvider(configuration: config, keychain: keychain)
         case .zai:
             return ZAIProvider(configuration: config, keychain: keychain)
+        case .zaiCoding:
+            return ZAIProvider(configuration: config, keychain: keychain)
         }
     }
 }

@@ -7,6 +7,7 @@ public enum ProviderID: String, Codable, Sendable, CaseIterable, Identifiable {
     case deepSeek = "deepseek"
     case moonshot = "moonshot"
     case zai = "zai"
+    case zaiCoding = "zai_coding"
 
     public var id: String { rawValue }
 
@@ -18,6 +19,7 @@ public enum ProviderID: String, Codable, Sendable, CaseIterable, Identifiable {
         case .deepSeek: return "DeepSeek"
         case .moonshot: return "Kimi (Moonshot)"
         case .zai: return "ZAI (Zhipu AI)"
+        case .zaiCoding: return "ZAI Coding"
         }
     }
 

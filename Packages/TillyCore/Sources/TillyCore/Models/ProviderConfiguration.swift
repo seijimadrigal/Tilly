@@ -69,5 +69,11 @@ public struct ProviderConfiguration: Codable, Sendable, Identifiable, Equatable 
             baseURL: URL(string: "https://open.bigmodel.cn/api/paas/v4")!,
             defaultModel: "glm-4-flash"
         ),
+        ProviderConfiguration(
+            providerID: .zaiCoding,
+            displayName: "ZAI Coding",
+            baseURL: URL(string: "https://api.z.ai/api/coding/paas/v4")!,
+            defaultModel: "glm-4-flash"
+        ),
     ]
 }
