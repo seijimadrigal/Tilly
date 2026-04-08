@@ -58,12 +58,20 @@ targets:
       - path: TillyRemote
         excludes:
           - "**/.DS_Store"
+          - Info.plist
     resources:
       - path: TillyRemote/Assets.xcassets
     dependencies:
       - package: TillyCore
     entitlements:
       path: TillyRemote/TillyRemote.entitlements
+    info:
+      path: TillyRemote/Info.plist
+      properties:
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+          UISceneConfigurations: {}
+        UILaunchScreen: {}
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.tilly.remote
@@ -72,9 +80,4 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "6.0"
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
-        GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
-        INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Tilly Remote needs to discover your Mac running Tilly on the local network."
-        INFOPLIST_KEY_NSBonjourServices: "(_tilly._tcp)"
         SWIFT_STRICT_CONCURRENCY: complete

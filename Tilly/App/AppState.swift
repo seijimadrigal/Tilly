@@ -75,6 +75,13 @@ final class AppState {
     }
 
     private func showAskUserPopup(question: String, options: [String]) async -> String {
+        // Also broadcast to iOS clients
+        remoteServer.broadcast(RemoteMessage(
+            type: .askUser,
+            text: question,
+            options: options
+        ))
+
         return await withCheckedContinuation { continuation in
             self.askUserQuestion = question
             self.askUserOptions = options

@@ -18,6 +18,7 @@ final class RemoteClient {
     var currentSession: Session?
     var streamingText: String = ""
     var isStreaming: Bool = false
+    var errorMessage: String?
 
     // Ask user dialog relay
     var showAskUser: Bool = false
@@ -32,16 +33,21 @@ final class RemoteClient {
     func startBrowsing() {
         state = .browsing
         discoveredHosts = []
+        errorMessage = nil
 
+        let descriptor = NWBrowser.Descriptor.bonjour(type: "_tilly._tcp", domain: "local.")
         let params = NWParameters()
         params.includePeerToPeer = true
-        browser = NWBrowser(for: .bonjour(type: "_tilly._tcp", domain: nil), using: params)
 
-        browser?.browseResultsChangedHandler = { [weak self] results, _ in
+        browser = NWBrowser(for: descriptor, using: params)
+
+        browser?.browseResultsChangedHandler = { [weak self] results, changes in
             Task { @MainActor in
-                self?.discoveredHosts = results.compactMap { result in
+                guard let self else { return }
+                self.discoveredHosts = results.compactMap { result in
                     switch result.endpoint {
-                    case .service(let name, _, _, _):
+                    case .service(let name, let type, let domain, let interface):
+                        print("[RemoteClient] Found: \(name) (\(type).\(domain))")
                         return (name: name, endpoint: result.endpoint)
                     default:
                         return nil
@@ -52,8 +58,18 @@ final class RemoteClient {
 
         browser?.stateUpdateHandler = { [weak self] newState in
             Task { @MainActor in
-                if case .failed = newState {
-                    self?.state = .disconnected
+                guard let self else { return }
+                switch newState {
+                case .ready:
+                    print("[RemoteClient] Browser ready, searching...")
+                case .failed(let error):
+                    print("[RemoteClient] Browser failed: \(error)")
+                    self.errorMessage = "Network browsing failed: \(error.localizedDescription)"
+                    self.state = .disconnected
+                case .cancelled:
+                    print("[RemoteClient] Browser cancelled")
+                default:
+                    break
                 }
             }
         }
@@ -70,8 +86,9 @@ final class RemoteClient {
 
     func connect(to endpoint: NWEndpoint) {
         state = .connecting
-        stopBrowsing()
+        errorMessage = nil
 
+        // Create TCP params with WebSocket
         let params = NWParameters.tcp
         let wsOptions = NWProtocolWebSocket.Options()
         wsOptions.autoReplyPing = true
@@ -81,14 +98,25 @@ final class RemoteClient {
 
         connection?.stateUpdateHandler = { [weak self] newState in
             Task { @MainActor in
+                guard let self else { return }
                 switch newState {
                 case .ready:
-                    self?.state = .connected
-                    self?.receiveMessages()
-                    self?.send(RemoteMessage(type: .listSessions))
-                case .failed, .cancelled:
-                    self?.state = .disconnected
-                    self?.connection = nil
+                    print("[RemoteClient] Connected!")
+                    self.state = .connected
+                    self.stopBrowsing()
+                    self.receiveMessages()
+                    // Request session list immediately
+                    self.send(RemoteMessage(type: .listSessions))
+                case .waiting(let error):
+                    print("[RemoteClient] Waiting: \(error)")
+                case .failed(let error):
+                    print("[RemoteClient] Connection failed: \(error)")
+                    self.errorMessage = "Connection failed: \(error.localizedDescription)"
+                    self.state = .disconnected
+                    self.connection = nil
+                case .cancelled:
+                    self.state = .disconnected
+                    self.connection = nil
                 default:
                     break
                 }
@@ -112,15 +140,24 @@ final class RemoteClient {
         state = .disconnected
         sessions = []
         currentSession = nil
+        streamingText = ""
+        isStreaming = false
     }
 
     // MARK: - Send / Receive
 
     func send(_ message: RemoteMessage) {
-        guard let data = message.encoded(), let connection else { return }
+        guard let data = message.encoded(), let connection else {
+            print("[RemoteClient] Cannot send - no connection or encoding failed")
+            return
+        }
         let metadata = NWProtocolWebSocket.Metadata(opcode: .text)
         let context = NWConnection.ContentContext(identifier: "ws", metadata: [metadata])
-        connection.send(content: data, contentContext: context, isComplete: true, completion: .idempotent)
+        connection.send(content: data, contentContext: context, isComplete: true, completion: .contentProcessed { error in
+            if let error {
+                print("[RemoteClient] Send error: \(error)")
+            }
+        })
     }
 
     func sendMessage(_ text: String) {
@@ -142,16 +179,36 @@ final class RemoteClient {
         send(RemoteMessage(type: .askUserResponse, text: choice))
     }
 
+    func refreshSessions() {
+        send(RemoteMessage(type: .listSessions))
+    }
+
     private func receiveMessages() {
-        connection?.receiveMessage { [weak self] data, context, _, error in
+        guard let connection else { return }
+        connection.receiveMessage { [weak self] data, context, isComplete, error in
             Task { @MainActor in
                 guard let self else { return }
 
-                if let data, let message = RemoteMessage.decoded(from: data) {
-                    self.handleMessage(message)
+                if let error {
+                    print("[RemoteClient] Receive error: \(error)")
+                    if self.state == .connected {
+                        self.disconnect()
+                    }
+                    return
                 }
 
-                if error == nil {
+                if let data {
+                    if let message = RemoteMessage.decoded(from: data) {
+                        self.handleMessage(message)
+                    } else {
+                        // Try to see what we got
+                        let raw = String(data: data, encoding: .utf8) ?? "(binary)"
+                        print("[RemoteClient] Could not decode message: \(raw.prefix(200))")
+                    }
+                }
+
+                // Continue receiving if still connected
+                if self.state == .connected {
                     self.receiveMessages()
                 }
             }
@@ -162,10 +219,13 @@ final class RemoteClient {
         switch message.type {
         case .sessionList:
             sessions = message.sessions ?? []
+            print("[RemoteClient] Got \(sessions.count) sessions")
 
         case .fullSession:
             currentSession = message.session
             isStreaming = false
+            streamingText = ""
+            print("[RemoteClient] Got full session: \(message.session?.title ?? "nil")")
 
         case .sessionCreated:
             currentSession = message.session
@@ -178,6 +238,10 @@ final class RemoteClient {
 
         case .streamEnd:
             isStreaming = false
+            // Request the full updated session
+            if let session = currentSession {
+                send(RemoteMessage(type: .selectSession, sessionID: session.id))
+            }
 
         case .askUser:
             askUserQuestion = message.text ?? ""
@@ -185,11 +249,12 @@ final class RemoteClient {
             showAskUser = true
 
         case .error:
-            print("[RemoteClient] Error: \(message.error ?? "unknown")")
+            errorMessage = message.error
+            print("[RemoteClient] Server error: \(message.error ?? "unknown")")
             isStreaming = false
 
         default:
-            break
+            print("[RemoteClient] Unhandled message type: \(message.type.rawValue)")
         }
     }
 }
