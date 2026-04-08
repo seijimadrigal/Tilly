@@ -53,7 +53,9 @@ struct RemoteContentView: View {
             }
             .sheet(isPresented: Binding(
                 get: { client.showAskUser },
-                set: { _ in }
+                set: { newValue in
+                    if !newValue { client.showAskUser = false }
+                }
             )) {
                 RemoteAskUserView()
                     .environment(client)
@@ -66,46 +68,65 @@ struct RemoteContentView: View {
 
 struct RemoteAskUserView: View {
     @Environment(RemoteClient.self) private var client
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
+            VStack(spacing: 24) {
+                Spacer()
+
                 Image(systemName: "questionmark.circle.fill")
-                    .font(.largeTitle)
+                    .font(.system(size: 48))
                     .foregroundStyle(.blue)
 
                 Text(client.askUserQuestion)
-                    .font(.body)
+                    .font(.headline)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
 
-                ForEach(Array(client.askUserOptions.enumerated()), id: \.offset) { index, option in
-                    Button {
-                        client.respondToAskUser(choice: option)
-                    } label: {
-                        HStack {
-                            Text("\(index + 1)")
-                                .font(.caption.bold())
-                                .foregroundStyle(.white)
-                                .frame(width: 28, height: 28)
-                                .background(Circle().fill(colorFor(index)))
+                VStack(spacing: 12) {
+                    ForEach(Array(client.askUserOptions.enumerated()), id: \.offset) { index, option in
+                        Button(action: {
+                            let choice = option
+                            dismiss()
+                            // Small delay to ensure sheet dismisses before sending
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                client.respondToAskUser(choice: choice)
+                            }
+                        }) {
+                            HStack(spacing: 12) {
+                                Text("\(index + 1)")
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(.white)
+                                    .frame(width: 32, height: 32)
+                                    .background(Circle().fill(colorFor(index)))
 
-                            Text(option)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                                Text(option)
+                                    .font(.body)
+                                    .foregroundStyle(.primary)
+                                    .multilineTextAlignment(.leading)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .background(Color(.secondarySystemBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
-                        .padding()
-                        .background(Color(.secondarySystemBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .buttonStyle(.borderless)
                     }
-                    .buttonStyle(.plain)
                 }
+                .padding(.horizontal)
+
+                Spacer()
             }
-            .padding()
-            .navigationTitle("Question")
+            .navigationTitle("Tilly needs input")
             .navigationBarTitleDisplayMode(.inline)
         }
-        .interactiveDismissDisabled()
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
     }
 
     private func colorFor(_ index: Int) -> Color {

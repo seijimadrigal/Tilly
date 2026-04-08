@@ -37,7 +37,7 @@
 
 /* Begin PBXFileReference section */
 		0041FC5B88A8254961BE31A0 /* RemoteChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteChatView.swift; sourceTree = "<group>"; };
-		21D2BFF89B7A7E7C9BEE38B7 /* TillyRemote.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TillyRemote.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		21D2BFF89B7A7E7C9BEE38B7 /* TillyRemote.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TillyRemote.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		284A846CCC67E7D89529FE2C /* MemoryBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryBrowserView.swift; sourceTree = "<group>"; };
 		317F09C0FAE8D0CEC4ACC685 /* TillyProviders */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TillyProviders; path = Packages/TillyProviders; sourceTree = SOURCE_ROOT; };
 		362249974F6531D337040ED5 /* InputBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputBarView.swift; sourceTree = "<group>"; };
@@ -355,8 +355,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1600;
-				TargetAttributes = {
-				};
 			};
 			buildConfigurationList = C79505BD4A249E3D73FEF54E /* Build configuration list for PBXProject "Tilly" */;
 			developmentRegion = en;
@@ -472,6 +470,7 @@
 				CODE_SIGN_ENTITLEMENTS = TillyRemote/TillyRemote.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = YZFVX59ZM2;
 				INFOPLIST_FILE = TillyRemote/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -582,6 +581,7 @@
 				CODE_SIGN_ENTITLEMENTS = TillyRemote/TillyRemote.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = YZFVX59ZM2;
 				INFOPLIST_FILE = TillyRemote/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (

@@ -186,10 +186,34 @@ final class AppState {
     // MARK: - Chat with Agent Loop
 
     func sendMessage(_ text: String) async {
+        await sendMessageWithAttachments(text, attachments: [])
+    }
+
+    func sendMessageWithAttachments(_ text: String, attachments: [AttachmentItem]) async {
         guard var session = currentSession, let provider = currentProvider else { return }
 
-        // Add user message
-        let userMessage = Message(role: .user, content: [.text(text)])
+        // Build content blocks from text + attachments
+        var contentBlocks: [ContentBlock] = []
+        if !text.isEmpty {
+            contentBlocks.append(.text(text))
+        }
+        for attachment in attachments {
+            switch attachment.type {
+            case .image:
+                contentBlocks.append(.image(data: attachment.data, mimeType: attachment.mimeType))
+            case .video, .audio, .file:
+                contentBlocks.append(.fileReference(FileAttachment(
+                    fileName: attachment.name,
+                    filePath: attachment.filePath ?? "",
+                    mimeType: attachment.mimeType,
+                    sizeBytes: attachment.fileSize
+                )))
+            }
+        }
+
+        if contentBlocks.isEmpty { return }
+
+        let userMessage = Message(role: .user, content: contentBlocks)
         session.appendMessage(userMessage)
         updateCurrentSession(session)
 
@@ -450,9 +474,28 @@ final class AppState {
         for msg in session.messages {
             switch msg.role {
             case .user:
+                // Build user content including file/image descriptions
+                var userContent = msg.textContent
+                for block in msg.content {
+                    switch block {
+                    case .image(_, let mimeType):
+                        userContent += "\n[Attached image: \(mimeType)]"
+                    case .fileReference(let file):
+                        userContent += "\n[Attached file: \(file.fileName) (\(file.mimeType), \(ByteCountFormatter.string(fromByteCount: file.sizeBytes, countStyle: .file)))]"
+                        // If it's a text-based file, include its content
+                        if file.mimeType.hasPrefix("text/") || ["swift", "py", "js", "ts", "json", "md", "yaml", "yml", "toml", "xml", "html", "css", "sh", "bash", "zsh", "c", "cpp", "h", "rs", "go", "java", "kt", "rb"].contains(URL(fileURLWithPath: file.filePath).pathExtension.lowercased()) {
+                            if let fileContent = try? String(contentsOfFile: file.filePath, encoding: .utf8) {
+                                let truncated = String(fileContent.prefix(8000))
+                                userContent += "\n```\n\(truncated)\n```"
+                            }
+                        }
+                    case .text:
+                        break
+                    }
+                }
                 messages.append(ChatCompletionRequest.ChatMessage(
                     role: "user",
-                    content: msg.textContent
+                    content: userContent
                 ))
             case .assistant:
                 messages.append(ChatCompletionRequest.ChatMessage(
