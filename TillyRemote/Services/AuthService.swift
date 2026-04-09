@@ -14,7 +14,7 @@ final class AuthServiceIOS {
     var userPhotoURL: URL?
     var errorMessage: String?
 
-    private var authStateHandle: AuthStateDidChangeListenerHandle?
+    private nonisolated(unsafe) var authStateHandle: AuthStateDidChangeListenerHandle?
 
     init() {
         authStateHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in

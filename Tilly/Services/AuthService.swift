@@ -14,7 +14,7 @@ final class AuthService {
     var userPhotoURL: URL?
     var errorMessage: String?
 
-    private var authStateHandle: AuthStateDidChangeListenerHandle?
+    private nonisolated(unsafe) var authStateHandle: AuthStateDidChangeListenerHandle?
 
     init() {
         // Listen for auth state changes
