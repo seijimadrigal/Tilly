@@ -203,58 +203,92 @@ struct RemoteChatViewFirebase: View {
 struct RemoteAskUserFirebase: View {
     @Environment(FirebaseRelayIOS.self) private var relay
     @Environment(\.dismiss) private var dismiss
+    @State private var customInput = ""
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-                Spacer()
+            ScrollView {
+                VStack(spacing: 20) {
+                    Image(systemName: "questionmark.circle.fill")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.blue)
+                        .padding(.top, 20)
 
-                Image(systemName: "questionmark.circle.fill")
-                    .font(.system(size: 48))
-                    .foregroundStyle(.blue)
+                    Text(relay.askUserQuestion)
+                        .font(.headline)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
 
-                Text(relay.askUserQuestion)
-                    .font(.headline)
-                    .multilineTextAlignment(.center)
+                    // 3 preset options
+                    VStack(spacing: 10) {
+                        ForEach(Array(relay.askUserOptions.enumerated()), id: \.offset) { index, option in
+                            Button(action: {
+                                let choice = option
+                                dismiss()
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    relay.respondToAskUser(choice: choice)
+                                }
+                            }) {
+                                HStack(spacing: 12) {
+                                    Text("\(index + 1)")
+                                        .font(.subheadline.bold())
+                                        .foregroundStyle(.white)
+                                        .frame(width: 32, height: 32)
+                                        .background(Circle().fill([Color.blue, .orange, .green][index % 3]))
+
+                                    Text(option)
+                                        .font(.body)
+                                        .foregroundStyle(.primary)
+                                        .multilineTextAlignment(.leading)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
+                                .background(Color(.secondarySystemBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                            .buttonStyle(.borderless)
+                        }
+                    }
                     .padding(.horizontal)
 
-                VStack(spacing: 12) {
-                    ForEach(Array(relay.askUserOptions.enumerated()), id: \.offset) { index, option in
-                        Button(action: {
-                            let choice = option
-                            dismiss()
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                relay.respondToAskUser(choice: choice)
-                            }
-                        }) {
-                            HStack(spacing: 12) {
-                                Text("\(index + 1)")
-                                    .font(.subheadline.bold())
-                                    .foregroundStyle(.white)
-                                    .frame(width: 32, height: 32)
-                                    .background(Circle().fill([Color.blue, .orange, .green][index % 3]))
+                    Divider().padding(.horizontal)
 
-                                Text(option)
-                                    .font(.body)
-                                    .foregroundStyle(.primary)
-                                    .multilineTextAlignment(.leading)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+                    // Custom input (4th option)
+                    VStack(spacing: 8) {
+                        Text("Or type your own response:")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
 
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
+                        HStack(spacing: 8) {
+                            TextField("Type here...", text: $customInput)
+                                .textFieldStyle(.roundedBorder)
+                                .onSubmit {
+                                    guard !customInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                                    let text = customInput
+                                    dismiss()
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                        relay.respondToAskUser(choice: text)
+                                    }
+                                }
+
+                            Button {
+                                let text = customInput
+                                dismiss()
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    relay.respondToAskUser(choice: text)
+                                }
+                            } label: {
+                                Image(systemName: "arrow.up.circle.fill")
+                                    .font(.title2)
+                                    .foregroundStyle(.blue)
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                            .background(Color(.secondarySystemBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .disabled(customInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         }
-                        .buttonStyle(.borderless)
                     }
+                    .padding(.horizontal)
+                    .padding(.bottom, 20)
                 }
-                .padding(.horizontal)
-
-                Spacer()
             }
             .navigationTitle("Tilly needs input")
             .navigationBarTitleDisplayMode(.inline)

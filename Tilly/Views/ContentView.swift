@@ -34,10 +34,10 @@ struct ContentView: View {
 
 struct AskUserDialogView: View {
     @Environment(AppState.self) private var appState
+    @State private var customInput = ""
 
     var body: some View {
-        VStack(spacing: 20) {
-            // Header
+        VStack(spacing: 16) {
             HStack {
                 Image(systemName: "questionmark.circle.fill")
                     .font(.title2)
@@ -46,7 +46,6 @@ struct AskUserDialogView: View {
                     .font(.headline)
             }
 
-            // Question
             Text(appState.askUserQuestion)
                 .font(.body)
                 .multilineTextAlignment(.center)
@@ -54,16 +53,15 @@ struct AskUserDialogView: View {
 
             Divider()
 
-            // Options
-            VStack(spacing: 10) {
+            // 3 preset options
+            VStack(spacing: 8) {
                 ForEach(Array(appState.askUserOptions.enumerated()), id: \.offset) { index, option in
                     Button {
                         appState.respondToAskUser(choice: option)
                     } label: {
                         HStack {
                             Text("\(index + 1)")
-                                .font(.caption)
-                                .fontWeight(.bold)
+                                .font(.caption.bold())
                                 .foregroundStyle(.white)
                                 .frame(width: 24, height: 24)
                                 .background(Circle().fill(colorForIndex(index)))
@@ -75,22 +73,46 @@ struct AskUserDialogView: View {
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color(.controlBackgroundColor))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                        )
+                        .background(RoundedRectangle(cornerRadius: 8).fill(Color(.controlBackgroundColor)))
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.2), lineWidth: 1))
                     }
                     .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal)
+
+            Divider()
+
+            // Custom input (4th option)
+            VStack(spacing: 8) {
+                Text("Or type your own response:")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                HStack(spacing: 8) {
+                    TextField("Type here...", text: $customInput)
+                        .textFieldStyle(.roundedBorder)
+                        .onSubmit {
+                            if !customInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                appState.respondToAskUser(choice: customInput)
+                            }
+                        }
+
+                    Button {
+                        appState.respondToAskUser(choice: customInput)
+                    } label: {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.blue)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(customInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .padding(.horizontal)
         }
         .padding(24)
-        .frame(width: 440)
+        .frame(width: 460)
         .interactiveDismissDisabled()
     }
 
