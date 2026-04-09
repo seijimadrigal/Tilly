@@ -62,6 +62,7 @@ final class AppState {
             scratchpadService: scratchpadService
         )
         setupAskUserHandler()
+        setupDelegateTaskHandler()
         setupFirebaseRelay()
         initializeProviders()
         loadSessions()
@@ -110,6 +111,62 @@ final class AppState {
             )
         } else {
             firebaseRelay.stop()
+        }
+    }
+
+    // MARK: - Sub-Agent Delegation
+
+    private func setupDelegateTaskHandler() {
+        toolRegistry.delegateTaskTool?.handler = { [weak self] task, role, allowedTools, maxRounds in
+            guard let self else { return "Sub-agent unavailable" }
+            return await self.runSubAgent(task: task, role: role, allowedTools: allowedTools, maxRounds: maxRounds)
+        }
+    }
+
+    private func runSubAgent(task: String, role: String, allowedTools: [String]?, maxRounds: Int) async -> String {
+        guard let provider = currentProvider else {
+            return "Error: No LLM provider configured"
+        }
+
+        // Build restricted tool set for the sub-agent
+        let defaultToolNames = ["web_fetch", "read_file", "list_directory", "execute_command", "scratchpad_write", "scratchpad_read"]
+        let allowedNames = Set(allowedTools ?? defaultToolNames)
+
+        // Get tools from registry by re-creating them (sub-agent gets its own instances)
+        var subTools: [any ToolExecutable] = []
+        if allowedNames.contains("execute_command") { subTools.append(ShellExecutor()) }
+        if allowedNames.contains("read_file") { subTools.append(FileReadTool()) }
+        if allowedNames.contains("write_file") { subTools.append(FileWriteTool()) }
+        if allowedNames.contains("list_directory") { subTools.append(DirectoryListTool()) }
+        if allowedNames.contains("web_fetch") { subTools.append(WebFetchTool()) }
+        if allowedNames.contains("open_application") { subTools.append(AppLauncher()) }
+        if allowedNames.contains("scratchpad_write") { subTools.append(ScratchpadWriteTool(service: scratchpadService)) }
+        if allowedNames.contains("scratchpad_read") { subTools.append(ScratchpadReadTool(service: scratchpadService)) }
+        if allowedNames.contains("memory_store") { subTools.append(MemoryStoreTool(service: memoryService)) }
+        if allowedNames.contains("memory_search") { subTools.append(MemorySearchTool(service: memoryService)) }
+
+        let subPrompt = """
+        You are a focused sub-agent with the role: \(role).
+
+        You have been delegated a specific task by the main Tilly agent. Complete this task thoroughly and return a clear, well-structured result.
+
+        CRITICAL: Respond directly. No internal reasoning. No meta-commentary. Just do the work and report results.
+
+        You have access to these tools: \(subTools.map(\.definition.function.name).joined(separator: ", "))
+        """
+
+        let runner = SubAgentRunner(
+            provider: provider,
+            model: selectedModelID,
+            tools: subTools,
+            maxRounds: maxRounds,
+            systemPrompt: subPrompt
+        )
+
+        do {
+            return try await runner.run(task: task)
+        } catch {
+            return "Sub-agent error: \(error.localizedDescription)"
         }
     }
 
@@ -745,6 +802,14 @@ final class AppState {
 
         ## User Interaction
         - **ask_user**: Ask the user a question with 3 options when unsure.
+
+        ## Sub-Agent Delegation
+        - **delegate_task**: Spawn a child agent to handle a sub-task independently. The child runs its own tool loop and returns results. Use this for:
+          - Research tasks: delegate web research while you work on implementation
+          - File analysis: delegate reading/exploring a codebase
+          - Parallel work: split a complex task into parts
+          - Specialized roles: "code reviewer", "researcher", "documentation writer"
+        The child cannot see this conversation. Give it complete, self-contained instructions.
 
         ## Guidelines
 

@@ -8,6 +8,9 @@ public final class ToolRegistry: @unchecked Sendable {
     /// The ask_user tool instance, exposed so the UI can set its handler.
     public private(set) var askUserTool: AskUserTool?
 
+    /// The delegate_task tool instance, exposed so AppState can set its handler.
+    public private(set) var delegateTaskTool: DelegateTaskTool?
+
     public init() {}
 
     public func register(_ tool: any ToolExecutable) {
@@ -62,6 +65,11 @@ public final class ToolRegistry: @unchecked Sendable {
         let askUser = AskUserTool()
         registry.register(askUser)
         registry.askUserTool = askUser
+
+        // Sub-agent delegation
+        let delegateTask = DelegateTaskTool()
+        registry.register(delegateTask)
+        registry.delegateTaskTool = delegateTask
 
         return registry
     }
