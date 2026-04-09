@@ -30,7 +30,5 @@
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
 	<string>1:664391781685:ios:2920052f5163d1f160507c</string>
-	<key>DATABASE_URL</key>
-	<string>https://tillyassistant-83591-default-rtdb.firebaseio.com</string>
 </dict>
 </plist>

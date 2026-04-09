@@ -3,34 +3,34 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>REPLACE_WITH_YOUR_CLIENT_ID.apps.googleusercontent.com</string>
+	<string>664391781685-auqfao61ajkmd0m16hkv2htn0rle1u82.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.REPLACE_WITH_YOUR_CLIENT_ID</string>
+	<string>com.googleusercontent.apps.664391781685-auqfao61ajkmd0m16hkv2htn0rle1u82</string>
 	<key>API_KEY</key>
-	<string>REPLACE_WITH_YOUR_API_KEY</string>
+	<string>AIzaSyDs5_cPh4gd2SM2MrlrggRxaTBdX98jp4s</string>
 	<key>GCM_SENDER_ID</key>
-	<string>REPLACE</string>
+	<string>664391781685</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>com.tilly.app</string>
 	<key>PROJECT_ID</key>
-	<string>REPLACE_WITH_YOUR_PROJECT_ID</string>
+	<string>tillyassistant-83591</string>
 	<key>STORAGE_BUCKET</key>
-	<string>REPLACE_WITH_YOUR_PROJECT_ID.appspot.com</string>
+	<string>tillyassistant-83591.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
-	<false/>
+	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
-	<false/>
+	<false></false>
 	<key>IS_APPINVITE_ENABLED</key>
-	<true/>
+	<true></true>
 	<key>IS_GCM_ENABLED</key>
-	<true/>
+	<true></true>
 	<key>IS_SIGNIN_ENABLED</key>
-	<true/>
+	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>REPLACE_WITH_YOUR_GOOGLE_APP_ID</string>
+	<string>1:664391781685:ios:05eeea52cd012e1c60507c</string>
 	<key>DATABASE_URL</key>
-	<string>https://REPLACE_WITH_YOUR_PROJECT_ID-default-rtdb.firebaseio.com</string>
+	<string>https://tillyassistant-83591-default-rtdb.firebaseio.com</string>
 </dict>
 </plist>

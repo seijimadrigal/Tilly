@@ -36,5 +36,8 @@ Package.resolved
 .vscode/
 .idea/
 
+# Firebase (contains API keys)
+**/GoogleService-Info.plist
+
 # Claude
 .claude/
