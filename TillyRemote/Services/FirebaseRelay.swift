@@ -2,10 +2,6 @@ import Foundation
 import FirebaseDatabase
 import TillyCore
 
-/// iOS reads sessions directly from Firebase persistent storage.
-/// Commands (sendMessage, newSession) go through the relay channel.
-/// Session data is read from /users/{uid}/sessions/{sid} directly.
-
 @MainActor
 @Observable
 final class FirebaseRelayIOS {
@@ -28,6 +24,9 @@ final class FirebaseRelayIOS {
     private var currentSessionHandle: DatabaseHandle?
     private var userID: String?
 
+    // Debounce: don't update UI more than once per second for session data
+    private var lastSessionUpdate: Date = .distantPast
+
     func start(userID: String) {
         guard !isConnected || self.userID != userID else { return }
         if isConnected { stop() }
@@ -36,21 +35,18 @@ final class FirebaseRelayIOS {
         let db = Database.database().reference()
         self.dbRef = db
 
-        // Watch Mac online status
         macStatusHandle = db.child("users/\(userID)/profile/macOnline").observe(.value) { [weak self] snapshot in
             Task { @MainActor in
                 self?.macOnline = snapshot.value as? Bool ?? false
             }
         }
 
-        // Watch session index (auto-updates when Mac syncs)
         sessionIndexHandle = db.child("users/\(userID)/sessionIndex").observe(.value) { [weak self] snapshot in
             Task { @MainActor in
                 self?.handleSessionIndex(snapshot)
             }
         }
 
-        // Watch relay notifications from Mac
         relayHandle = db.child("users/\(userID)/relay/mac_to_ios").observe(.childAdded) { [weak self] snapshot in
             Task { @MainActor in
                 guard let self else { return }
@@ -65,18 +61,16 @@ final class FirebaseRelayIOS {
 
     func stop() {
         guard let userID, let dbRef else { return }
-
         if let h = relayHandle { dbRef.child("users/\(userID)/relay/mac_to_ios").removeObserver(withHandle: h) }
         if let h = macStatusHandle { dbRef.child("users/\(userID)/profile/macOnline").removeObserver(withHandle: h) }
         if let h = sessionIndexHandle { dbRef.child("users/\(userID)/sessionIndex").removeObserver(withHandle: h) }
         stopWatchingCurrentSession()
-
         isConnected = false
         self.dbRef = nil
         self.userID = nil
     }
 
-    // MARK: - Read sessions directly from Firebase
+    // MARK: - Session Index
 
     private func handleSessionIndex(_ snapshot: DataSnapshot) {
         guard let list = snapshot.value as? [[String: Any]] else {
@@ -88,26 +82,23 @@ final class FirebaseRelayIOS {
             guard let idStr = dict["id"] as? String,
                   let id = UUID(uuidString: idStr),
                   let title = dict["title"] as? String else { return nil }
-            let count = dict["messageCount"] as? Int ?? 0
-            let ts = dict["updatedAt"] as? TimeInterval ?? 0
-            let providerID = dict["providerID"] as? String ?? ""
-            let modelID = dict["modelID"] as? String ?? ""
             return SessionSummary(
-                id: id, title: title, messageCount: count,
-                updatedAt: Date(timeIntervalSince1970: ts),
-                providerID: providerID, modelID: modelID
+                id: id, title: title,
+                messageCount: dict["messageCount"] as? Int ?? 0,
+                updatedAt: Date(timeIntervalSince1970: dict["updatedAt"] as? TimeInterval ?? 0),
+                providerID: dict["providerID"] as? String ?? "",
+                modelID: dict["modelID"] as? String ?? ""
             )
         }
-        print("[FirebaseRelayIOS] Session index updated: \(sessions.count) sessions")
+        print("[FirebaseRelayIOS] Session index: \(sessions.count) sessions")
     }
 
-    /// Load a full session from Firebase persistent storage
+    // MARK: - Session Watching
+
     func selectSession(id: UUID) {
         guard let userID, let dbRef else { return }
-        let path = "users/\(userID)/sessions/\(id.uuidString)"
-
-        // Start watching this session for real-time updates
         stopWatchingCurrentSession()
+        let path = "users/\(userID)/sessions/\(id.uuidString)"
         currentSessionHandle = dbRef.child(path).observe(.value) { [weak self] snapshot in
             Task { @MainActor in
                 self?.handleSessionData(snapshot)
@@ -124,35 +115,33 @@ final class FirebaseRelayIOS {
     }
 
     private func handleSessionData(_ snapshot: DataSnapshot) {
-        guard let dict = snapshot.value as? [String: Any] else {
-            print("[FirebaseRelayIOS] Session snapshot is not a dictionary")
-            return
-        }
+        // Debounce — skip if updated less than 0.5s ago
+        let now = Date()
+        guard now.timeIntervalSince(lastSessionUpdate) > 0.5 else { return }
+        lastSessionUpdate = now
+
+        guard let dict = snapshot.value as? [String: Any] else { return }
 
         do {
             let jsonData = try JSONSerialization.data(withJSONObject: dict)
             let session = try JSONDecoder.remoteDecoder.decode(Session.self, from: jsonData)
-            currentSession = session
-            isStreaming = false
-            streamingText = ""
-            print("[FirebaseRelayIOS] Session loaded: \(session.title) (\(session.messages.count) msgs)")
+
+            // Only update if message count changed or this is initial load
+            if currentSession?.id != session.id || currentSession?.messages.count != session.messages.count {
+                currentSession = session
+                print("[FirebaseRelayIOS] Session: \(session.title) (\(session.messages.count) msgs)")
+            }
         } catch {
             print("[FirebaseRelayIOS] Decode error: \(error)")
-            // Try to print the raw JSON for debugging
-            if let jsonData = try? JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted),
-               let raw = String(data: jsonData, encoding: .utf8) {
-                print("[FirebaseRelayIOS] Raw JSON (first 500 chars): \(raw.prefix(500))")
-            }
         }
     }
 
-    // MARK: - Send commands to Mac
+    // MARK: - Send to Mac
 
     func sendToMac(_ message: RemoteMessage) {
         guard let userID, let dbRef else { return }
         guard let data = message.encoded(),
               let json = try? JSONSerialization.jsonObject(with: data) else { return }
-        print("[FirebaseRelayIOS] Sending: \(message.type.rawValue)")
         dbRef.child("users/\(userID)/relay/ios_to_mac").childByAutoId().setValue(json) { error, _ in
             if let error { print("[FirebaseRelayIOS] Write error: \(error.localizedDescription)") }
         }
@@ -178,14 +167,12 @@ final class FirebaseRelayIOS {
         sendToMac(RemoteMessage(type: .askUserResponse, text: choice))
     }
 
-    // MARK: - Handle relay notifications (small messages only)
+    // MARK: - Relay Messages (small notifications only)
 
     private func handleRelayMessage(_ snapshot: DataSnapshot) {
         guard let dict = snapshot.value as? [String: Any],
               let jsonData = try? JSONSerialization.data(withJSONObject: dict),
               let message = RemoteMessage.decoded(from: jsonData) else { return }
-
-        print("[FirebaseRelayIOS] Relay: \(message.type.rawValue)")
 
         switch message.type {
         case .streamDelta:
@@ -193,16 +180,14 @@ final class FirebaseRelayIOS {
 
         case .streamEnd:
             isStreaming = false
-            // The session observer will auto-refresh when Mac syncs
+            streamingText = ""
+            // Reset debounce so the final session update comes through immediately
+            lastSessionUpdate = .distantPast
 
         case .sessionCreated:
             if let id = message.sessionID {
                 selectSession(id: id)
             }
-
-        case .sessionSelected:
-            // Mac confirmed session is synced — observer handles the rest
-            break
 
         case .askUser:
             askUserQuestion = message.text ?? ""

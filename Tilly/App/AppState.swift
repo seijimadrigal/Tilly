@@ -198,6 +198,7 @@ final class AppState {
         sessions.insert(session, at: 0)
         currentSession = session
         sessionService.save(session)
+        syncSessionToFirebase(session)
     }
 
     func selectSession(_ session: Session) {
@@ -223,8 +224,14 @@ final class AppState {
         }
         // Auto-persist to disk
         sessionService.save(session)
-        // Sync to Firebase for iOS real-time updates
+        // NOTE: Firebase sync is NOT done here to avoid spamming on every streaming token.
+        // Instead, syncSessionToFirebase() is called explicitly at key moments.
+    }
+
+    /// Sync current session to Firebase. Call after streaming ends, not during.
+    func syncSessionToFirebase(_ session: Session) {
         firebaseRelay.syncSession(session)
+        firebaseRelay.syncSessionIndex()
     }
 
     // MARK: - Chat with Agent Loop
@@ -278,11 +285,11 @@ final class AppState {
 
         isStreaming = false
 
-        // Notify remote clients that streaming is done
-        firebaseRelay.sendToiOS(RemoteMessage(type: .streamEnd))
+        // Sync completed session to Firebase + notify iOS
         if let session = currentSession {
-            firebaseRelay.sendToiOS(RemoteMessage(type: .fullSession, session: session))
+            syncSessionToFirebase(session)
         }
+        firebaseRelay.sendToiOS(RemoteMessage(type: .streamEnd))
 
         // Auto-generate title via LLM after first exchange
         if session.title == "New Chat" &&
