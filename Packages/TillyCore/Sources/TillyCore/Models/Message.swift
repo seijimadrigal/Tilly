@@ -34,6 +34,18 @@ public struct Message: Identifiable, Codable, Sendable, Equatable {
         self.metadata = metadata
     }
 
+    // Custom decoder to handle Firebase null/missing fields
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        role = try container.decode(Role.self, forKey: .role)
+        content = try container.decodeIfPresent([ContentBlock].self, forKey: .content) ?? []
+        toolCalls = try container.decodeIfPresent([ToolCall].self, forKey: .toolCalls)
+        toolCallID = try container.decodeIfPresent(String.self, forKey: .toolCallID)
+        timestamp = try container.decodeIfPresent(Date.self, forKey: .timestamp) ?? Date()
+        metadata = try container.decodeIfPresent(MessageMetadata.self, forKey: .metadata)
+    }
+
     public var textContent: String {
         content.compactMap { block in
             if case .text(let text) = block { return text }

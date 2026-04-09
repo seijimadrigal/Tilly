@@ -39,6 +39,22 @@ public struct Session: Identifiable, Codable, Sendable, Equatable {
         self.tags = tags
     }
 
+    // Custom decoder to handle Firebase null/missing fields gracefully
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        title = try container.decodeIfPresent(String.self, forKey: .title) ?? "New Chat"
+        messages = try container.decodeIfPresent([Message].self, forKey: .messages) ?? []
+        systemPrompt = try container.decodeIfPresent(SystemPrompt.self, forKey: .systemPrompt)
+        providerID = try container.decodeIfPresent(String.self, forKey: .providerID) ?? ""
+        modelID = try container.decodeIfPresent(String.self, forKey: .modelID) ?? ""
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+        updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
+        parentSessionID = try container.decodeIfPresent(UUID.self, forKey: .parentSessionID)
+        forkPointIndex = try container.decodeIfPresent(Int.self, forKey: .forkPointIndex)
+        tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
+    }
+
     public mutating func appendMessage(_ message: Message) {
         messages.append(message)
         updatedAt = Date()

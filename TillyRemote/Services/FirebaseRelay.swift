@@ -124,16 +124,26 @@ final class FirebaseRelayIOS {
     }
 
     private func handleSessionData(_ snapshot: DataSnapshot) {
-        guard let dict = snapshot.value as? [String: Any],
-              let jsonData = try? JSONSerialization.data(withJSONObject: dict),
-              let session = try? JSONDecoder.remoteDecoder.decode(Session.self, from: jsonData) else {
-            print("[FirebaseRelayIOS] Failed to decode session from Firebase")
+        guard let dict = snapshot.value as? [String: Any] else {
+            print("[FirebaseRelayIOS] Session snapshot is not a dictionary")
             return
         }
-        currentSession = session
-        isStreaming = false
-        streamingText = ""
-        print("[FirebaseRelayIOS] Session loaded: \(session.title) (\(session.messages.count) msgs)")
+
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: dict)
+            let session = try JSONDecoder.remoteDecoder.decode(Session.self, from: jsonData)
+            currentSession = session
+            isStreaming = false
+            streamingText = ""
+            print("[FirebaseRelayIOS] Session loaded: \(session.title) (\(session.messages.count) msgs)")
+        } catch {
+            print("[FirebaseRelayIOS] Decode error: \(error)")
+            // Try to print the raw JSON for debugging
+            if let jsonData = try? JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted),
+               let raw = String(data: jsonData, encoding: .utf8) {
+                print("[FirebaseRelayIOS] Raw JSON (first 500 chars): \(raw.prefix(500))")
+            }
+        }
     }
 
     // MARK: - Send commands to Mac
