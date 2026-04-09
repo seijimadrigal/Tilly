@@ -537,12 +537,7 @@ final class AppState {
         // Collect messages for context — include tool calls to understand the task
         let relevantMessages = session.messages.prefix(8).compactMap { msg -> ChatCompletionRequest.ChatMessage? in
             guard msg.role == .user || msg.role == .assistant else { return nil }
-            var text = String(msg.textContent.prefix(300))
-            // Include tool call names for task context
-            if let toolCalls = msg.toolCalls {
-                let tools = toolCalls.map(\.function.name).joined(separator: ", ")
-                text += " [used tools: \(tools)]"
-            }
+            let text = String(msg.textContent.prefix(300))
             guard !text.isEmpty else { return nil }
             return ChatCompletionRequest.ChatMessage(role: msg.role.rawValue, content: text)
         }
