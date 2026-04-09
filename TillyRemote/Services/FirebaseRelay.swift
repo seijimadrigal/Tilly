@@ -24,6 +24,10 @@ final class FirebaseRelayIOS {
     private var userID: String?
 
     func start(userID: String) {
+        // Prevent multiple starts
+        guard !isConnected || self.userID != userID else { return }
+        if isConnected { stop() }
+
         self.userID = userID
         let db = Database.database().reference()
         self.dbRef = db

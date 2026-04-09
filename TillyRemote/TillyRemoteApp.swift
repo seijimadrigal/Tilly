@@ -38,11 +38,6 @@ struct TillyRemoteApp: App {
                     RemoteContentView()
                         .environment(authService)
                         .environment(relay)
-                        .onAppear {
-                            if let uid = authService.userID {
-                                relay.start(userID: uid)
-                            }
-                        }
                 } else {
                     SignInViewIOS()
                         .environment(authService)
