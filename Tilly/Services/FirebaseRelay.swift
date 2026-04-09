@@ -77,11 +77,12 @@ final class FirebaseRelay {
 
     /// Load settings from Firebase
     func loadSettings() async -> (providerID: String, modelID: String)? {
-        guard let userID, let dbRef else { return nil }
+        guard let userID else { return nil }
 
+        let path = "users/\(userID)/settings"
         do {
-            let snapshot = try await dbRef.child("users/\(userID)/settings").getData()
-            guard let dict = snapshot.value as? [String: Any] else { return nil }
+            let dict = try await fetchDictionary(at: path)
+            guard let dict else { return nil }
             let providerID = dict["selectedProviderID"] as? String ?? ""
             let modelID = dict["selectedModelID"] as? String ?? ""
             if !providerID.isEmpty && !modelID.isEmpty {
@@ -92,6 +93,13 @@ final class FirebaseRelay {
             print("[FirebaseRelay] Failed to load settings: \(error)")
             return nil
         }
+    }
+
+    /// Nonisolated helper to avoid sending DatabaseReference across isolation boundaries
+    nonisolated private func fetchDictionary(at path: String) async throws -> [String: Any]? {
+        let ref = Database.database().reference().child(path)
+        let snapshot = try await ref.getData()
+        return snapshot.value as? [String: Any]
     }
 
     // MARK: - Handle Incoming
