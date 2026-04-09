@@ -183,40 +183,28 @@ final class FirebaseRelay {
     }
 
     /// Strip heavy content and limit messages for Firebase transfer.
-    /// Firebase drops connection on large writes (~100KB+).
+    /// Firebase Realtime DB drops socket on writes over ~10KB.
     private func stripHeavyContent(from session: Session) -> Session {
         var light = session
-        // Only send last 30 messages to keep payload under 20KB
-        let recentMessages = Array(session.messages.suffix(30))
+        // Only send last 10 messages to keep payload small
+        let recentMessages = Array(session.messages.suffix(10))
         light.messages = recentMessages.map { msg in
             var m = msg
             m.content = msg.content.compactMap { block in
                 switch block {
                 case .text(let text):
-                    // Truncate very long text blocks
-                    if text.count > 2000 {
-                        return .text(String(text.prefix(2000)) + "\n... [truncated]")
+                    if text.count > 500 {
+                        return .text(String(text.prefix(500)) + "...")
                     }
                     return block
                 case .image(_, let mimeType):
                     return .text("[Image: \(mimeType)]")
-                case .fileReference:
-                    return block
+                case .fileReference(let file):
+                    return .text("[File: \(file.fileName)]")
                 }
             }
-            // Strip tool call arguments if very long
-            if let toolCalls = m.toolCalls {
-                m.toolCalls = toolCalls.map { tc in
-                    let args = tc.function.arguments
-                    if args.count > 500 {
-                        return ToolCall(id: tc.id, function: ToolCall.FunctionCall(
-                            name: tc.function.name,
-                            arguments: String(args.prefix(500)) + "..."
-                        ))
-                    }
-                    return tc
-                }
-            }
+            m.toolCalls = nil  // Strip tool calls entirely for size
+            m.metadata = nil   // Strip metadata for size
             return m
         }
         return light
