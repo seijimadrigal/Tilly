@@ -18,31 +18,18 @@
 	<string>0.1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
-	<key>UIApplicationSceneManifest</key>
-	<dict>
-		<key>UIApplicationSupportsMultipleScenes</key>
-		<false/>
-		<key>UISceneConfigurations</key>
-		<dict/>
-	</dict>
-	<key>UILaunchScreen</key>
-	<dict/>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.developer-tools</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.664391781685-vdhkfbk2c8eprq5tae49f6ecu5ugqq40</string>
+				<string>com.googleusercontent.apps.664391781685-auqfao61ajkmd0m16hkv2htn0rle1u82</string>
 			</array>
 			<key>CFBundleURLName</key>
 			<string>Google Sign-In</string>
 		</dict>
-	</array>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>Tilly Remote needs to discover your Mac running Tilly on the local network.</string>
-	<key>NSBonjourServices</key>
-	<array>
-		<string>_tilly._tcp</string>
 	</array>
 </dict>
 </plist>

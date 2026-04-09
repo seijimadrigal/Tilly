@@ -32,6 +32,7 @@ targets:
       - path: Tilly
         excludes:
           - "Preview Content"
+          - Info.plist
     resources:
       - path: Tilly/Assets.xcassets
       - path: Tilly/Preview Content
@@ -51,6 +52,8 @@ targets:
         product: GoogleSignInSwift
     entitlements:
       path: Tilly/Tilly.entitlements
+    info:
+      path: Tilly/Info.plist
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.tilly.app
@@ -59,9 +62,6 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "6.0"
         MACOSX_DEPLOYMENT_TARGET: "15.0"
-        INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.developer-tools"
-        INFOPLIST_KEY_NSHumanReadableCopyright: ""
-        GENERATE_INFOPLIST_FILE: YES
         ENABLE_PREVIEWS: YES
         SWIFT_STRICT_CONCURRENCY: complete
         OTHER_LDFLAGS: "-ObjC"
