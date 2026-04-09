@@ -51,6 +51,13 @@ struct TillyRemoteApp: App {
             .onAppear {
                 authService.restoreSession()
             }
+            .onChange(of: authService.isSignedIn) {
+                if authService.isSignedIn, let uid = authService.userID {
+                    relay.start(userID: uid)
+                } else {
+                    relay.stop()
+                }
+            }
             .onOpenURL { url in
                 GIDSignIn.sharedInstance.handle(url)
             }

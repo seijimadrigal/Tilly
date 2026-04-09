@@ -45,6 +45,15 @@ struct TillyApp: App {
             .onOpenURL { url in
                 GIDSignIn.sharedInstance.handle(url)
             }
+            .onChange(of: appState.authService.isSignedIn) {
+                appState.onAuthStateChanged()
+            }
+            .onAppear {
+                // Start relay if already signed in from previous session
+                if appState.authService.isSignedIn {
+                    appState.onAuthStateChanged()
+                }
+            }
         }
         .commands {
             AppCommands(appState: appState)
