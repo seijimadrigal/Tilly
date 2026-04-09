@@ -76,10 +76,21 @@ final class FirebaseRelayIOS {
 
     /// Send a message to Mac via Firebase
     func sendToMac(_ message: RemoteMessage) {
-        guard let userID, let dbRef else { return }
+        guard let userID, let dbRef else {
+            print("[FirebaseRelayIOS] sendToMac failed: no userID or dbRef")
+            return
+        }
         guard let data = message.encoded(),
-              let json = try? JSONSerialization.jsonObject(with: data) else { return }
-        dbRef.child("users/\(userID)/relay/ios_to_mac").childByAutoId().setValue(json)
+              let json = try? JSONSerialization.jsonObject(with: data) else {
+            print("[FirebaseRelayIOS] sendToMac failed: encoding error")
+            return
+        }
+        print("[FirebaseRelayIOS] Sending: \(message.type.rawValue)")
+        dbRef.child("users/\(userID)/relay/ios_to_mac").childByAutoId().setValue(json) { error, _ in
+            if let error {
+                print("[FirebaseRelayIOS] Write error: \(error.localizedDescription)")
+            }
+        }
     }
 
     func sendMessage(_ text: String) {
@@ -124,16 +135,23 @@ final class FirebaseRelayIOS {
     private func handleIncoming(_ snapshot: DataSnapshot) {
         guard let dict = snapshot.value as? [String: Any],
               let jsonData = try? JSONSerialization.data(withJSONObject: dict),
-              let message = RemoteMessage.decoded(from: jsonData) else { return }
+              let message = RemoteMessage.decoded(from: jsonData) else {
+            print("[FirebaseRelayIOS] Failed to decode incoming message")
+            return
+        }
+
+        print("[FirebaseRelayIOS] Received: \(message.type.rawValue)")
 
         switch message.type {
         case .sessionList:
             sessions = message.sessions ?? []
+            print("[FirebaseRelayIOS] Got \(sessions.count) sessions")
 
         case .fullSession:
             if let session = message.session {
                 // Cache it
                 sessionCache[session.id] = session
+                print("[FirebaseRelayIOS] Got full session: \(session.title) (\(session.messages.count) msgs)")
                 // Update current session if we're viewing this one
                 if currentSession?.id == session.id {
                     currentSession = session
