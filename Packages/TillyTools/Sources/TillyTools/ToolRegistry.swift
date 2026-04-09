@@ -41,8 +41,16 @@ public final class ToolRegistry: @unchecked Sendable {
         registry.register(AppLauncher())
         registry.register(FileReadTool())
         registry.register(FileWriteTool())
+        registry.register(FileEditTool())
         registry.register(DirectoryListTool())
         registry.register(WebFetchTool())
+        registry.register(WebSearchTool())
+        registry.register(HttpApiTool())
+        registry.register(GitTool())
+        registry.register(BackgroundTaskTool())
+        registry.register(ScreenshotTool())
+        registry.register(ClipboardTool())
+        registry.register(NotificationTool())
 
         // Memory tools
         registry.register(MemoryStoreTool(service: memoryService))

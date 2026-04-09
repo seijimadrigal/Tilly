@@ -129,7 +129,7 @@ final class AppState {
         }
 
         // Build restricted tool set for the sub-agent
-        let defaultToolNames = ["web_fetch", "read_file", "list_directory", "execute_command", "scratchpad_write", "scratchpad_read"]
+        let defaultToolNames = ["web_search", "web_fetch", "http_request", "read_file", "list_directory", "execute_command", "edit_file", "git", "scratchpad_write", "scratchpad_read"]
         let allowedNames = Set(allowedTools ?? defaultToolNames)
 
         // Get tools from registry by re-creating them (sub-agent gets its own instances)
@@ -137,8 +137,12 @@ final class AppState {
         if allowedNames.contains("execute_command") { subTools.append(ShellExecutor()) }
         if allowedNames.contains("read_file") { subTools.append(FileReadTool()) }
         if allowedNames.contains("write_file") { subTools.append(FileWriteTool()) }
+        if allowedNames.contains("edit_file") { subTools.append(FileEditTool()) }
         if allowedNames.contains("list_directory") { subTools.append(DirectoryListTool()) }
         if allowedNames.contains("web_fetch") { subTools.append(WebFetchTool()) }
+        if allowedNames.contains("web_search") { subTools.append(WebSearchTool()) }
+        if allowedNames.contains("http_request") { subTools.append(HttpApiTool()) }
+        if allowedNames.contains("git") { subTools.append(GitTool()) }
         if allowedNames.contains("open_application") { subTools.append(AppLauncher()) }
         if allowedNames.contains("scratchpad_write") { subTools.append(ScratchpadWriteTool(service: scratchpadService)) }
         if allowedNames.contains("scratchpad_read") { subTools.append(ScratchpadReadTool(service: scratchpadService)) }
@@ -762,13 +766,15 @@ final class AppState {
 
         CRITICAL: Always respond directly to the user in a natural, conversational tone. NEVER write your internal thoughts, reasoning process, or meta-commentary in your response. Do NOT say things like "The user is asking...", "Let me think about...", "I should...", or narrate what you're doing. Just respond naturally as if you're talking to a friend. Your output goes directly to the user — they see everything you write.
 
-        ## Core Tools
-        - **execute_command**: Shell commands via /bin/zsh. ALWAYS set the timeout parameter: 10 for quick (ls/cat), 60 for normal, 300 for builds, 600 for large file ops, 900 for docker/clone. Default is 5min.
-        - **open_application**: Open macOS apps, files, or URLs.
-        - **read_file**: Read file contents with optional line range.
-        - **write_file**: Write or append to files.
-        - **list_directory**: List directory contents.
-        - **web_fetch**: Fetch and read web page content.
+        ## Tools
+
+        **Execution**: execute_command (shell), open_application, background_run (non-blocking)
+        **Files**: read_file, write_file, edit_file (find-and-replace), list_directory
+        **Web**: web_search (DuckDuckGo), web_fetch (read page), http_request (GET/POST/PUT/DELETE with headers+body)
+        **Git**: git (status/diff/log/add/commit/branch/checkout/push/pull/stash/clone)
+        **System**: screenshot (capture screen), clipboard (read/write), notify (macOS notifications)
+
+        Set timeout on execute_command: 10 quick, 60 normal, 300 builds, 600 large ops, 900 docker/clone.
 
         ## Working Scratchpad (Session Memory)
         Your working memory for the current task. Use it to stay organized during complex work.
