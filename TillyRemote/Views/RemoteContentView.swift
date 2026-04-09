@@ -69,23 +69,45 @@ struct RemoteSessionListFirebase: View {
 
     var body: some View {
         List {
-            ForEach(relay.sessions) { session in
-                Button {
-                    relay.selectSession(id: session.id)
-                } label: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(session.title)
-                            .font(.body)
-                            .lineLimit(1)
+            if relay.sessions.isEmpty {
+                HStack {
+                    ProgressView().scaleEffect(0.8)
+                    Text("Loading sessions...").foregroundStyle(.secondary)
+                }
+            } else {
+                ForEach(relay.sessions) { summary in
+                    Button {
+                        // Navigate immediately — create placeholder session
+                        let placeholder = Session(
+                            id: summary.id,
+                            title: summary.title,
+                            providerID: summary.providerID,
+                            modelID: summary.modelID
+                        )
+                        relay.currentSession = relay.sessionCache[summary.id] ?? placeholder
+                        // Request full data in background
+                        relay.selectSession(id: summary.id)
+                    } label: {
                         HStack {
-                            Text("\(session.messageCount) messages")
-                            Text("·")
-                            Text(session.updatedAt, style: .relative)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(summary.title)
+                                    .font(.body)
+                                    .lineLimit(1)
+                                HStack {
+                                    Text("\(summary.messageCount) messages")
+                                    Text("·")
+                                    Text(summary.updatedAt, style: .relative)
+                                }
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
                         }
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 2)
                     }
-                    .padding(.vertical, 2)
                 }
             }
         }

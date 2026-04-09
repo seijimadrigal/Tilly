@@ -133,9 +133,9 @@ final class FirebaseRelay {
             sendToiOS(RemoteMessage(type: .sessionList, sessions: summaries))
 
         case .selectSession:
+            // Don't change Mac's active session — just return the data
             if let id = message.sessionID,
                let session = appState.sessions.first(where: { $0.id == id }) {
-                appState.selectSession(session)
                 sendToiOS(RemoteMessage(type: .fullSession, session: session))
             }
 
