@@ -62,6 +62,9 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "6.0"
         MACOSX_DEPLOYMENT_TARGET: "15.0"
+        DEVELOPMENT_TEAM: YZFVX59ZM2
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "Apple Development"
         ENABLE_PREVIEWS: YES
         SWIFT_STRICT_CONCURRENCY: complete
         OTHER_LDFLAGS: "-ObjC"

@@ -400,6 +400,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
+					184047298CD6D33481749E1D = {
+						DevelopmentTeam = YZFVX59ZM2;
+						ProvisioningStyle = Automatic;
+					};
 					2CA45159B71DE18520CF286D = {
 						DevelopmentTeam = YZFVX59ZM2;
 						ProvisioningStyle = Automatic;
@@ -515,7 +519,6 @@
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = com.tilly.app;
 				PRODUCT_NAME = Tilly;
-				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 6.0;
@@ -569,7 +572,6 @@
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = com.tilly.app;
 				PRODUCT_NAME = Tilly;
-				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 6.0;
