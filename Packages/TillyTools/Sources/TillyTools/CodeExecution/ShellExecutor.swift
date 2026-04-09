@@ -33,7 +33,7 @@ public final class ShellExecutor: ToolExecutable, @unchecked Sendable {
         ToolDefinition(
             function: ToolDefinition.FunctionDef(
                 name: "execute_command",
-                description: "Execute a shell command on the user's macOS system. Use this to run terminal commands, install packages, compile code, run scripts, manage files, check system status, or perform any operation available from the command line. Commands run in /bin/zsh. You can chain commands with && or ;. Returns stdout, stderr, and exit code. IMPORTANT: For commands that delete files (rm, trash, etc.), you MUST first use ask_user to get permission, then pass confirmed: true.",
+                description: "Execute a shell command on the user's macOS system via /bin/zsh. Returns stdout, stderr, and exit code. IMPORTANT: (1) For delete commands (rm, trash), use ask_user first then pass confirmed:true. (2) YOU MUST set the timeout parameter based on the task: use 10 for quick commands (ls, cat), 60 for normal, 300 for builds/installs, 600 for large file operations or compiles, 900 for docker/clone. Default is 300s but always set it explicitly.",
                 parameters: .object([
                     "type": .string("object"),
                     "properties": .object([
@@ -47,7 +47,7 @@ public final class ShellExecutor: ToolExecutable, @unchecked Sendable {
                         ]),
                         "timeout": .object([
                             "type": .string("number"),
-                            "description": .string("Optional timeout in seconds. Defaults to 30."),
+                            "description": .string("Timeout in seconds. YOU SHOULD ALWAYS SET THIS based on the expected duration: 10 for quick (ls, cat, echo), 60 for normal, 300 for builds, 600 for large writes/compiles, 900 for docker/git clone. Default 300s."),
                         ]),
                         "confirmed": .object([
                             "type": .string("boolean"),
@@ -120,8 +120,8 @@ public final class ShellExecutor: ToolExecutable, @unchecked Sendable {
         let longPattern = #"\b(docker\s+(build|compose|pull)|git\s+clone|rsync|wget|curl\s+.*-[oO]|tar\s+.*[xczf]|zip\s+-r|unzip)\b"#
         if matches(cmd, pattern: longPattern) { return 900 }
 
-        // Default: 60 seconds (up from 30)
-        return 60
+        // Default: 300 seconds (5 min) — generous to avoid killing long tasks
+        return 300
     }
 
     private static func matches(_ text: String, pattern: String) -> Bool {
