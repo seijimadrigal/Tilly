@@ -299,9 +299,10 @@ final class AppState {
         }
         firebaseRelay.sendToiOS(RemoteMessage(type: .streamEnd))
 
-        // Auto-generate title via LLM after first exchange
-        if session.title == "New Chat" &&
-           session.messages.contains(where: { $0.role == .assistant && !$0.textContent.isEmpty }) {
+        // Auto-generate title — on first exchange and again after 4+ messages for better context
+        let needsTitle = session.title == "New Chat" ||
+            (session.messages.count >= 4 && session.messages.count <= 6 && isGenericTitle(session.title))
+        if needsTitle && session.messages.contains(where: { $0.role == .assistant && !$0.textContent.isEmpty }) {
             let sid = session.id
             Task { @MainActor [weak self] in
                 await self?.generateSessionTitle(sessionID: sid)
@@ -390,6 +391,13 @@ final class AppState {
         agentRound = 0
         currentToolName = nil
         currentToolSummary = nil
+    }
+
+    /// Check if a title is too generic and should be regenerated with more context
+    private func isGenericTitle(_ title: String) -> Bool {
+        let lowered = title.lowercased()
+        let generic = ["hello", "hi", "hey", "greeting", "chat", "new chat", "conversation", "help", "question", "request"]
+        return generic.contains(where: { lowered.contains($0) }) || title.count < 8
     }
 
     /// Extract a brief summary from tool call arguments for progress display.
@@ -526,10 +534,15 @@ final class AppState {
 
         let session = sessions[idx]
 
-        // Collect first few messages for context
-        let relevantMessages = session.messages.prefix(4).compactMap { msg -> ChatCompletionRequest.ChatMessage? in
+        // Collect messages for context — include tool calls to understand the task
+        let relevantMessages = session.messages.prefix(8).compactMap { msg -> ChatCompletionRequest.ChatMessage? in
             guard msg.role == .user || msg.role == .assistant else { return nil }
-            let text = String(msg.textContent.prefix(200))
+            var text = String(msg.textContent.prefix(300))
+            // Include tool call names for task context
+            if let toolCalls = msg.toolCalls {
+                let tools = toolCalls.map(\.function.name).joined(separator: ", ")
+                text += " [used tools: \(tools)]"
+            }
             guard !text.isEmpty else { return nil }
             return ChatCompletionRequest.ChatMessage(role: msg.role.rawValue, content: text)
         }
@@ -539,7 +552,9 @@ final class AppState {
         var titleMessages: [ChatCompletionRequest.ChatMessage] = [
             ChatCompletionRequest.ChatMessage(
                 role: "system",
-                content: "Generate a short title (4-7 words) for this conversation. Return ONLY the title text, nothing else. No quotes. No punctuation at the end."
+                content: """
+                Generate a concise title (3-6 words) that describes the PROJECT or TASK in this conversation. Focus on WHAT is being done, not the greeting. Examples of good titles: "Setup Python Flask API", "Debug Xcode Build Error", "Research LLM Agent Patterns", "Clean Up Desktop Files". Return ONLY the title, nothing else. No quotes, no punctuation at the end, no explanations.
+                """
             )
         ]
         titleMessages.append(contentsOf: relevantMessages)
@@ -692,6 +707,8 @@ final class AppState {
 
         return """
         You are Tilly, a powerful AI agent running as a native macOS application. You have direct access to the user's computer through tools, persistent memory, a skill library, and working scratchpad.
+
+        CRITICAL: Always respond directly to the user in a natural, conversational tone. NEVER write your internal thoughts, reasoning process, or meta-commentary in your response. Do NOT say things like "The user is asking...", "Let me think about...", "I should...", or narrate what you're doing. Just respond naturally as if you're talking to a friend. Your output goes directly to the user — they see everything you write.
 
         ## Core Tools
         - **execute_command**: Shell commands via /bin/zsh. ALWAYS set the timeout parameter: 10 for quick (ls/cat), 60 for normal, 300 for builds, 600 for large file ops, 900 for docker/clone. Default is 5min.
