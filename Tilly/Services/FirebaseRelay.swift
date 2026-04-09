@@ -2,6 +2,15 @@ import Foundation
 import FirebaseDatabase
 import TillyCore
 
+/// Firebase structure:
+/// /users/{uid}/
+///   profile/          — macOnline, lastSeen
+///   settings/         — selectedProviderID, selectedModelID
+///   sessions/{sid}/   — full session JSON (persistent, both devices read)
+///   relay/
+///     ios_to_mac/     — commands from iOS (ephemeral)
+///     mac_to_ios/     — small notifications (ephemeral)
+
 @MainActor
 @Observable
 final class FirebaseRelay {
@@ -24,21 +33,21 @@ final class FirebaseRelay {
         let profileRef = db.child("users/\(userID)/profile")
         profileRef.child("macOnline").setValue(true)
         profileRef.child("lastSeen").setValue(ServerValue.timestamp())
-
-        // Set offline hook — when Mac disconnects, mark offline
         profileRef.child("macOnline").onDisconnectSetValue(false)
         profileRef.child("lastSeen").onDisconnectSetValue(ServerValue.timestamp())
 
-        // Listen for incoming messages from iOS
+        // Listen for commands from iOS
         let incomingRef = db.child("users/\(userID)/relay/ios_to_mac")
         incomingHandle = incomingRef.observe(.childAdded) { [weak self] snapshot in
             Task { @MainActor in
                 guard let self else { return }
                 self.handleIncoming(snapshot)
-                // Clean up processed message
                 snapshot.ref.removeValue()
             }
         }
+
+        // Sync all existing sessions to Firebase
+        syncAllSessions()
 
         isConnected = true
         print("[FirebaseRelay] Started for user \(userID)")
@@ -60,23 +69,68 @@ final class FirebaseRelay {
         print("[FirebaseRelay] Stopped")
     }
 
-    /// Send a message to iOS via Firebase
+    // MARK: - Session Sync (persistent storage, not relay)
+
+    /// Write a single session to Firebase. Called on every session update.
+    func syncSession(_ session: Session) {
+        guard let userID, let dbRef else { return }
+        let path = "users/\(userID)/sessions/\(session.id.uuidString)"
+
+        // Convert to lightweight dict — strip binary image data
+        let lightSession = stripImages(from: session)
+        guard let data = try? JSONEncoder.remoteEncoder.encode(lightSession),
+              let json = try? JSONSerialization.jsonObject(with: data) else { return }
+
+        dbRef.child(path).setValue(json) { error, _ in
+            if let error {
+                print("[FirebaseRelay] Session sync error: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Sync all sessions on startup
+    func syncAllSessions() {
+        guard let appState else { return }
+        for session in appState.sessions {
+            syncSession(session)
+        }
+        // Also write session index (lightweight list)
+        syncSessionIndex()
+    }
+
+    /// Write a lightweight session index for fast listing
+    func syncSessionIndex() {
+        guard let userID, let dbRef, let appState else { return }
+        let index = appState.sessions.map { session -> [String: Any] in
+            [
+                "id": session.id.uuidString,
+                "title": session.title,
+                "messageCount": session.messages.count,
+                "updatedAt": session.updatedAt.timeIntervalSince1970,
+                "providerID": session.providerID,
+                "modelID": session.modelID,
+            ]
+        }
+        dbRef.child("users/\(userID)/sessionIndex").setValue(index)
+    }
+
+    /// Delete a session from Firebase
+    func deleteSession(_ sessionID: UUID) {
+        guard let userID, let dbRef else { return }
+        dbRef.child("users/\(userID)/sessions/\(sessionID.uuidString)").removeValue()
+        syncSessionIndex()
+    }
+
+    // MARK: - Small relay messages (commands + notifications)
+
     func sendToiOS(_ message: RemoteMessage) {
-        guard let userID, let dbRef else {
-            print("[FirebaseRelay] sendToiOS failed: no userID or dbRef")
-            return
-        }
+        guard let userID, let dbRef else { return }
         guard let data = message.encoded(),
-              let json = try? JSONSerialization.jsonObject(with: data) else {
-            print("[FirebaseRelay] sendToiOS failed: encoding error for type \(message.type.rawValue)")
-            return
-        }
+              let json = try? JSONSerialization.jsonObject(with: data) else { return }
 
         let size = data.count
         print("[FirebaseRelay] Sending \(message.type.rawValue) (\(size) bytes)")
 
-        // Firebase has a ~16MB limit per write but large payloads are slow
-        // For session data, strip image content to keep payloads small
         dbRef.child("users/\(userID)/relay/mac_to_ios").childByAutoId().setValue(json) { error, _ in
             if let error {
                 print("[FirebaseRelay] Write error: \(error.localizedDescription)")
@@ -84,7 +138,6 @@ final class FirebaseRelay {
         }
     }
 
-    /// Sync settings to Firebase
     func syncSettings(providerID: String, modelID: String) {
         guard let userID, let dbRef else { return }
         dbRef.child("users/\(userID)/settings").setValue([
@@ -93,10 +146,8 @@ final class FirebaseRelay {
         ])
     }
 
-    /// Load settings from Firebase
     func loadSettings() async -> (providerID: String, modelID: String)? {
         guard let userID else { return nil }
-
         let path = "users/\(userID)/settings"
         do {
             let dict = try await fetchDictionary(at: path)
@@ -113,21 +164,18 @@ final class FirebaseRelay {
         }
     }
 
-    /// Nonisolated helper to avoid sending DatabaseReference across isolation boundaries
     nonisolated private func fetchDictionary(at path: String) async throws -> [String: Any]? {
         let ref = Database.database().reference().child(path)
         let snapshot = try await ref.getData()
         return snapshot.value as? [String: Any]
     }
 
-    // MARK: - Handle Incoming
+    // MARK: - Handle Incoming Commands
 
     private func handleIncoming(_ snapshot: DataSnapshot) {
         guard let dict = snapshot.value as? [String: Any],
               let jsonData = try? JSONSerialization.data(withJSONObject: dict),
-              let message = RemoteMessage.decoded(from: jsonData) else {
-            return
-        }
+              let message = RemoteMessage.decoded(from: jsonData) else { return }
 
         Task { @MainActor in
             await processMessage(message)
@@ -135,41 +183,35 @@ final class FirebaseRelay {
     }
 
     private func processMessage(_ message: RemoteMessage) async {
-        guard let appState else {
-            print("[FirebaseRelay] processMessage: appState is nil")
-            return
-        }
-
+        guard let appState else { return }
         print("[FirebaseRelay] Processing: \(message.type.rawValue)")
 
         switch message.type {
         case .sendMessage:
             if let text = message.text {
-                print("[FirebaseRelay] Executing sendMessage: \(text.prefix(50))")
                 await appState.sendMessage(text)
             }
 
         case .listSessions:
-            let summaries = appState.sessions.map { SessionSummary(from: $0) }
-            print("[FirebaseRelay] Sending \(summaries.count) sessions to iOS")
-            sendToiOS(RemoteMessage(type: .sessionList, sessions: summaries))
+            // Sync index instead of sending via relay
+            syncSessionIndex()
+            // Also send a small notification
+            sendToiOS(RemoteMessage(type: .sessionList))
 
         case .selectSession:
-            // Don't change Mac's active session — just return the data
+            // Re-sync the requested session to Firebase persistent storage
             if let id = message.sessionID,
                let session = appState.sessions.first(where: { $0.id == id }) {
-                // Strip image data from messages to keep payload small
-                let lightSession = stripHeavyContent(from: session)
-                print("[FirebaseRelay] Sending session '\(session.title)' (\(session.messages.count) msgs)")
-                sendToiOS(RemoteMessage(type: .fullSession, session: lightSession))
-            } else {
-                print("[FirebaseRelay] Session not found for id: \(message.sessionID?.uuidString ?? "nil")")
+                syncSession(session)
+                sendToiOS(RemoteMessage(type: .sessionSelected, sessionID: id))
             }
 
         case .newSession:
             appState.createNewSession()
             if let session = appState.currentSession {
-                sendToiOS(RemoteMessage(type: .sessionCreated, session: stripHeavyContent(from: session)))
+                syncSession(session)
+                syncSessionIndex()
+                sendToiOS(RemoteMessage(type: .sessionCreated, sessionID: session.id))
             }
 
         case .askUserResponse:
@@ -182,29 +224,20 @@ final class FirebaseRelay {
         }
     }
 
-    /// Strip heavy content and limit messages for Firebase transfer.
-    /// Firebase Realtime DB drops socket on writes over ~10KB.
-    private func stripHeavyContent(from session: Session) -> Session {
+    // MARK: - Helpers
+
+    private func stripImages(from session: Session) -> Session {
         var light = session
-        // Only send last 10 messages to keep payload small
-        let recentMessages = Array(session.messages.suffix(10))
-        light.messages = recentMessages.map { msg in
+        light.messages = session.messages.map { msg in
             var m = msg
-            m.content = msg.content.compactMap { block in
+            m.content = msg.content.map { block in
                 switch block {
-                case .text(let text):
-                    if text.count > 500 {
-                        return .text(String(text.prefix(500)) + "...")
-                    }
-                    return block
                 case .image(_, let mimeType):
                     return .text("[Image: \(mimeType)]")
-                case .fileReference(let file):
-                    return .text("[File: \(file.fileName)]")
+                default:
+                    return block
                 }
             }
-            m.toolCalls = nil  // Strip tool calls entirely for size
-            m.metadata = nil   // Strip metadata for size
             return m
         }
         return light

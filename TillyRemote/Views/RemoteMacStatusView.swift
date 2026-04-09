@@ -6,54 +6,47 @@ struct RemoteMacStatusView: View {
 
     var body: some View {
         VStack(spacing: 20) {
+            Spacer()
+
             if relay.macOnline {
-                // Mac is online — show go to sessions
-                VStack(spacing: 16) {
-                    Image(systemName: "desktopcomputer")
-                        .font(.system(size: 48))
-                        .foregroundStyle(.green)
+                Image(systemName: "desktopcomputer")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.green)
 
-                    Text("Your Mac is online")
-                        .font(.headline)
+                Text("Your Mac is online")
+                    .font(.headline)
 
-                    Text("Tilly is running and ready")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                Text("Tilly is running and ready")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
 
-                    Button {
-                        relay.requestSessions()
-                    } label: {
-                        Text("View Sessions")
-                            .font(.body.weight(.medium))
-                            .frame(maxWidth: 200)
-                            .padding(.vertical, 12)
-                            .background(Color.blue)
-                            .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                if relay.sessions.isEmpty {
+                    VStack(spacing: 8) {
+                        ProgressView()
+                        Text("Loading sessions...")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
                     }
+                    .padding(.top, 20)
                 }
             } else {
-                // Mac is offline
-                VStack(spacing: 16) {
-                    Image(systemName: "desktopcomputer")
-                        .font(.system(size: 48))
-                        .foregroundStyle(.gray)
+                Image(systemName: "desktopcomputer")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.gray)
 
-                    Text("Your Mac is offline")
-                        .font(.headline)
-                        .foregroundStyle(.secondary)
+                Text("Your Mac is offline")
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
 
-                    Text("Make sure Tilly is running on your Mac and you're signed in with the same Google account.")
-                        .font(.subheadline)
-                        .foregroundStyle(.tertiary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
-                }
+                Text("Make sure Tilly is running on your Mac and you're signed in with the same Google account.")
+                    .font(.subheadline)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
             }
+
+            Spacer()
         }
         .padding()
-        .onAppear {
-            relay.requestSessions()
-        }
     }
 }

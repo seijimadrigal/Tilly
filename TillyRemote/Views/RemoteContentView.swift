@@ -77,15 +77,13 @@ struct RemoteSessionListFirebase: View {
             } else {
                 ForEach(relay.sessions) { summary in
                     Button {
-                        // Navigate immediately — create placeholder session
-                        let placeholder = Session(
+                        // Navigate immediately with placeholder, Firebase observer loads full data
+                        relay.currentSession = Session(
                             id: summary.id,
                             title: summary.title,
                             providerID: summary.providerID,
                             modelID: summary.modelID
                         )
-                        relay.currentSession = relay.sessionCache[summary.id] ?? placeholder
-                        // Request full data in background
                         relay.selectSession(id: summary.id)
                     } label: {
                         HStack {

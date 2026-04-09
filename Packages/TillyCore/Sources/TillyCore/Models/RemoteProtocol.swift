@@ -73,6 +73,15 @@ public struct SessionSummary: Codable, Sendable, Identifiable {
         self.providerID = session.providerID
         self.modelID = session.modelID
     }
+
+    public init(id: UUID, title: String, messageCount: Int, updatedAt: Date, providerID: String, modelID: String) {
+        self.id = id
+        self.title = title
+        self.messageCount = messageCount
+        self.updatedAt = updatedAt
+        self.providerID = providerID
+        self.modelID = modelID
+    }
 }
 
 // MARK: - Shared encoder/decoder

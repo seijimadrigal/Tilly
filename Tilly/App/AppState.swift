@@ -207,6 +207,7 @@ final class AppState {
     func deleteSession(_ session: Session) {
         sessions.removeAll { $0.id == session.id }
         sessionService.delete(session.id)
+        firebaseRelay.deleteSession(session.id)
         if currentSession?.id == session.id {
             currentSession = sessions.first
             if currentSession == nil {
@@ -222,6 +223,8 @@ final class AppState {
         }
         // Auto-persist to disk
         sessionService.save(session)
+        // Sync to Firebase for iOS real-time updates
+        firebaseRelay.syncSession(session)
     }
 
     // MARK: - Chat with Agent Loop
