@@ -10,20 +10,24 @@ struct ChatView: View {
             // Messages
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(spacing: 0) {
-                        if let session = appState.currentSession {
-                            ForEach(Array(session.messages.enumerated()), id: \.element.id) { index, message in
-                                MessageView(message: message)
-                                    .id(message.id)
+                    VStack(spacing: 0) {
+                        // Center content with max width like ChatGPT
+                        LazyVStack(spacing: 0) {
+                            if let session = appState.currentSession {
+                                ForEach(session.messages) { message in
+                                    MessageView(message: message)
+                                        .id(message.id)
+                                }
+                            }
+
+                            if appState.isStreaming {
+                                StreamingIndicatorView()
+                                    .id("streaming-indicator")
                             }
                         }
-
-                        if appState.isStreaming {
-                            StreamingIndicatorView()
-                                .id("streaming-indicator")
-                        }
                     }
-                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
                 }
                 .onAppear { scrollProxy = proxy }
                 .onChange(of: appState.currentSession?.messages.count) {
@@ -41,7 +45,7 @@ struct ChatView: View {
         }
         .navigationTitle(appState.currentSession?.title ?? "Chat")
         .navigationSubtitle(
-            "\(appState.selectedProviderID.displayName) / \(appState.selectedModelID)"
+            "\(appState.selectedProviderID.displayName) · \(appState.selectedModelID)"
         )
     }
 
@@ -56,41 +60,64 @@ struct ChatView: View {
     }
 }
 
+// MARK: - Streaming Indicator
+
 struct StreamingIndicatorView: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        HStack(spacing: 8) {
-            ProgressView()
-                .controlSize(.small)
+        HStack(alignment: .top, spacing: 14) {
+            // Avatar matching assistant style
+            Circle()
+                .fill(.purple.gradient)
+                .overlay(
+                    Image(systemName: "sparkle")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.white)
+                )
+                .frame(width: 30, height: 30)
 
-            if let toolName = appState.currentToolName {
-                Image(systemName: iconForTool(toolName))
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-                Text(appState.currentToolSummary ?? toolName)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            } else {
-                Text("Thinking...")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Tilly")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.purple)
+
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+
+                    if let toolName = appState.currentToolName {
+                        Image(systemName: iconForTool(toolName))
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                        Text(appState.currentToolSummary ?? toolName)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    } else {
+                        Text("Thinking...")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    if appState.agentRound > 1 {
+                        Text("Round \(appState.agentRound)")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color.gray.opacity(0.12)))
+                    }
+                }
             }
+            .frame(maxWidth: 680, alignment: .leading)
 
-            Spacer()
-
-            if appState.agentRound > 0 {
-                Text("Round \(appState.agentRound)")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Capsule().fill(Color.gray.opacity(0.15)))
-            }
+            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
     }
 
     private func iconForTool(_ name: String) -> String {

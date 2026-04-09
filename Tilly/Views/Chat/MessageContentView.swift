@@ -9,79 +9,71 @@ struct MessageContentView: View {
             ForEach(Array(content.enumerated()), id: \.offset) { _, block in
                 switch block {
                 case .text(let text):
-                    MarkdownTextView(text: text)
+                    RichTextView(text: text)
                 case .image(let data, _):
                     if let nsImage = NSImage(data: data) {
                         Image(nsImage: nsImage)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                            .frame(maxWidth: 400, maxHeight: 300)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .frame(maxWidth: 480, maxHeight: 360)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
                     }
                 case .fileReference(let file):
-                    FileReferenceView(file: file)
+                    FileChipView(file: file)
                 }
             }
         }
     }
 }
 
-/// Simple markdown-aware text rendering.
-/// For Phase 3, this will be replaced with gonzalezreal/textual.
-struct MarkdownTextView: View {
+// MARK: - Rich Text View (Markdown-aware)
+
+struct RichTextView: View {
     let text: String
 
     var body: some View {
-        // Parse code blocks vs regular text
         let segments = parseSegments(text)
 
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
                 switch segment {
                 case .text(let content):
+                    // Use SwiftUI's built-in markdown rendering
                     Text(LocalizedStringKey(content))
-                        .textSelection(.enabled)
                         .font(.body)
-                case .codeBlock(let language, let code):
-                    VStack(alignment: .leading, spacing: 0) {
-                        if !language.isEmpty {
-                            Text(language)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 10)
-                                .padding(.top, 6)
-                                .padding(.bottom, 2)
-                        }
+                        .lineSpacing(4)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            Text(code)
-                                .font(.system(.body, design: .monospaced))
-                                .textSelection(.enabled)
-                                .padding(10)
-                        }
-                    }
-                    .background(Color(.textBackgroundColor).opacity(0.5))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                    )
-                case .inlineCode(let code):
-                    Text(code)
-                        .font(.system(.body, design: .monospaced))
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 1)
-                        .background(Color(.textBackgroundColor).opacity(0.5))
-                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                case .codeBlock(let language, let code):
+                    CodeBlockView(language: language, code: code)
+
+                case .heading(let level, let content):
+                    Text(content)
+                        .font(fontForHeading(level))
+                        .fontWeight(.bold)
+                        .padding(.top, level == 1 ? 8 : 4)
                 }
             }
         }
     }
 
+    private func fontForHeading(_ level: Int) -> Font {
+        switch level {
+        case 1: return .title2
+        case 2: return .title3
+        case 3: return .headline
+        default: return .subheadline
+        }
+    }
+
+    // MARK: - Segment Parsing
+
     private enum TextSegment {
         case text(String)
         case codeBlock(language: String, code: String)
-        case inlineCode(String)
+        case heading(level: Int, content: String)
     }
 
     private func parseSegments(_ text: String) -> [TextSegment] {
@@ -89,68 +81,163 @@ struct MarkdownTextView: View {
         var remaining = text
 
         while !remaining.isEmpty {
-            // Look for fenced code blocks
+            // Check for fenced code block
             if let codeBlockRange = remaining.range(of: "```") {
-                // Add text before the code block
                 let beforeCode = String(remaining[remaining.startIndex..<codeBlockRange.lowerBound])
                 if !beforeCode.isEmpty {
-                    segments.append(.text(beforeCode))
+                    segments.append(contentsOf: parseTextAndHeadings(beforeCode))
                 }
 
                 remaining = String(remaining[codeBlockRange.upperBound...])
 
-                // Get language identifier (rest of line after ```)
                 var language = ""
                 if let newlineRange = remaining.range(of: "\n") {
                     language = String(remaining[remaining.startIndex..<newlineRange.lowerBound]).trimmingCharacters(in: .whitespaces)
                     remaining = String(remaining[newlineRange.upperBound...])
                 }
 
-                // Find closing ```
                 if let closingRange = remaining.range(of: "```") {
                     let code = String(remaining[remaining.startIndex..<closingRange.lowerBound])
                     segments.append(.codeBlock(language: language, code: code.trimmingCharacters(in: .newlines)))
                     remaining = String(remaining[closingRange.upperBound...])
                 } else {
-                    // No closing ```, treat rest as code
                     segments.append(.codeBlock(language: language, code: remaining.trimmingCharacters(in: .newlines)))
                     remaining = ""
                 }
             } else {
-                // No more code blocks, add remaining text
-                segments.append(.text(remaining))
+                segments.append(contentsOf: parseTextAndHeadings(remaining))
                 remaining = ""
             }
         }
 
         return segments
     }
+
+    private func parseTextAndHeadings(_ text: String) -> [TextSegment] {
+        var segments: [TextSegment] = []
+        var currentText = ""
+
+        for line in text.components(separatedBy: "\n") {
+            if line.hasPrefix("### ") {
+                if !currentText.isEmpty {
+                    segments.append(.text(currentText.trimmingCharacters(in: .whitespacesAndNewlines)))
+                    currentText = ""
+                }
+                segments.append(.heading(level: 3, content: String(line.dropFirst(4))))
+            } else if line.hasPrefix("## ") {
+                if !currentText.isEmpty {
+                    segments.append(.text(currentText.trimmingCharacters(in: .whitespacesAndNewlines)))
+                    currentText = ""
+                }
+                segments.append(.heading(level: 2, content: String(line.dropFirst(3))))
+            } else if line.hasPrefix("# ") {
+                if !currentText.isEmpty {
+                    segments.append(.text(currentText.trimmingCharacters(in: .whitespacesAndNewlines)))
+                    currentText = ""
+                }
+                segments.append(.heading(level: 1, content: String(line.dropFirst(2))))
+            } else {
+                currentText += (currentText.isEmpty ? "" : "\n") + line
+            }
+        }
+
+        if !currentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            segments.append(.text(currentText.trimmingCharacters(in: .whitespacesAndNewlines)))
+        }
+
+        return segments
+    }
 }
 
-struct FileReferenceView: View {
+// MARK: - Code Block View (with copy button & language label)
+
+struct CodeBlockView: View {
+    let language: String
+    let code: String
+    @State private var copied = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header bar
+            HStack {
+                if !language.isEmpty {
+                    Text(language)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(code, forType: .string)
+                    copied = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { copied = false }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                        Text(copied ? "Copied" : "Copy")
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(copied ? .green : .secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Color(.windowBackgroundColor).opacity(0.5))
+
+            // Code content
+            ScrollView(.horizontal, showsIndicators: false) {
+                Text(code)
+                    .font(.system(size: 12.5, design: .monospaced))
+                    .textSelection(.enabled)
+                    .lineSpacing(3)
+                    .padding(12)
+            }
+        }
+        .background(Color(nsColor: NSColor(white: 0.12, alpha: 1.0)))
+        .foregroundStyle(.white)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+// MARK: - File Chip View
+
+struct FileChipView: View {
     let file: FileAttachment
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "doc.fill")
+        HStack(spacing: 10) {
+            Image(systemName: iconForMime(file.mimeType))
+                .font(.title3)
                 .foregroundStyle(.blue)
-            VStack(alignment: .leading) {
+                .frame(width: 32, height: 32)
+                .background(Color.blue.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+
+            VStack(alignment: .leading, spacing: 1) {
                 Text(file.fileName)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                Text(formatSize(file.sizeBytes))
+                    .font(.caption.weight(.medium))
+                    .lineLimit(1)
+                Text(ByteCountFormatter.string(fromByteCount: file.sizeBytes, countStyle: .file))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
         }
         .padding(8)
-        .background(Color(.controlBackgroundColor))
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .background(Color(.controlBackgroundColor).opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.gray.opacity(0.15), lineWidth: 1)
+        )
     }
 
-    private func formatSize(_ bytes: Int64) -> String {
-        let formatter = ByteCountFormatter()
-        formatter.countStyle = .file
-        return formatter.string(fromByteCount: bytes)
+    private func iconForMime(_ mime: String) -> String {
+        if mime.hasPrefix("image/") { return "photo" }
+        if mime.hasPrefix("video/") { return "film" }
+        if mime.hasPrefix("audio/") { return "waveform" }
+        if mime.contains("pdf") { return "doc.richtext" }
+        if mime.contains("json") { return "curlybraces" }
+        return "doc"
     }
 }

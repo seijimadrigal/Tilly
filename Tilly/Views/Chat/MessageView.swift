@@ -1,123 +1,143 @@
 import SwiftUI
 import TillyCore
 
+// MARK: - Message View (ChatGPT-style)
+
 struct MessageView: View {
     let message: Message
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: 14) {
             // Avatar
             avatar
-                .frame(width: 28, height: 28)
 
-            // Content
-            VStack(alignment: .leading, spacing: 4) {
+            // Content column
+            VStack(alignment: .leading, spacing: 6) {
                 // Role label
                 Text(roleLabel)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(roleColor)
 
-                // Message content
-                if !message.textContent.isEmpty {
-                    if message.role == .tool {
-                        ToolResultContentView(text: message.textContent)
-                    } else {
-                        MessageContentView(content: message.content)
-                    }
-                }
-
-                // Tool calls made by this assistant message
+                // Tool calls (inline, collapsed by default) — shown BEFORE text
                 if let toolCalls = message.toolCalls, !toolCalls.isEmpty {
                     ForEach(toolCalls) { toolCall in
-                        ToolCallView(toolCall: toolCall)
+                        InlineToolCallView(toolCall: toolCall)
                     }
                 }
 
-                // Metadata
+                // Main content
+                if message.role == .tool {
+                    InlineToolResultView(text: message.textContent)
+                } else if !message.textContent.isEmpty {
+                    MessageContentView(content: message.content)
+                }
+
+                // Metadata (subtle, bottom)
                 if let metadata = message.metadata {
-                    MetadataView(metadata: metadata)
+                    MetadataBar(metadata: metadata)
                 }
             }
+            .frame(maxWidth: 680, alignment: .leading)
 
-            Spacer(minLength: 20)
+            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
         .background(backgroundColor)
     }
 
+    // MARK: - Avatar
+
     @ViewBuilder
     private var avatar: some View {
-        switch message.role {
-        case .user:
-            Image(systemName: "person.circle.fill")
-                .font(.title2)
-                .foregroundStyle(.blue)
-        case .assistant:
-            Image(systemName: "sparkle")
-                .font(.title3)
-                .foregroundStyle(.purple)
-                .frame(width: 28, height: 28)
-                .background(Circle().fill(.purple.opacity(0.15)))
-        case .system:
-            Image(systemName: "gearshape.fill")
-                .font(.title3)
-                .foregroundStyle(.gray)
-        case .tool:
-            Image(systemName: "wrench.and.screwdriver.fill")
-                .font(.caption)
-                .foregroundStyle(.white)
-                .frame(width: 28, height: 28)
-                .background(Circle().fill(.orange))
+        Group {
+            switch message.role {
+            case .user:
+                Circle()
+                    .fill(.blue.gradient)
+                    .overlay(
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(.white)
+                    )
+            case .assistant:
+                Circle()
+                    .fill(.purple.gradient)
+                    .overlay(
+                        Image(systemName: "sparkle")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(.white)
+                    )
+            case .system:
+                Circle()
+                    .fill(.gray.gradient)
+                    .overlay(
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.white)
+                    )
+            case .tool:
+                Circle()
+                    .fill(.orange.gradient)
+                    .overlay(
+                        Image(systemName: "wrench.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.white)
+                    )
+            }
         }
+        .frame(width: 30, height: 30)
     }
 
     private var roleLabel: String {
         switch message.role {
         case .user: return "You"
-        case .assistant: return "Assistant"
+        case .assistant: return "Tilly"
         case .system: return "System"
-        case .tool:
-            if let toolCallID = message.toolCallID {
-                return "Tool Result [\(toolCallID.prefix(8))...]"
-            }
-            return "Tool Result"
+        case .tool: return "Tool Result"
+        }
+    }
+
+    private var roleColor: Color {
+        switch message.role {
+        case .user: return .primary
+        case .assistant: return .purple
+        case .system: return .secondary
+        case .tool: return .orange
         }
     }
 
     private var backgroundColor: Color {
-        switch message.role {
-        case .user: return Color.clear
-        case .assistant: return Color(.controlBackgroundColor).opacity(0.5)
-        case .system: return Color.yellow.opacity(0.05)
-        case .tool: return Color.orange.opacity(0.05)
-        }
+        message.role == .assistant ? Color(.controlBackgroundColor).opacity(0.3) : .clear
     }
 }
 
-// MARK: - Tool Call View
+// MARK: - Inline Tool Call (collapsed by default)
 
-struct ToolCallView: View {
+struct InlineToolCallView: View {
     let toolCall: ToolCall
     @State private var isExpanded = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            // Header
+        VStack(alignment: .leading, spacing: 0) {
+            // Header — always visible
             Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
+                withAnimation(.easeInOut(duration: 0.15)) {
                     isExpanded.toggle()
                 }
             } label: {
-                HStack(spacing: 6) {
+                HStack(spacing: 8) {
+                    // Accent bar
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(.orange.opacity(0.6))
+                        .frame(width: 3)
+
                     Image(systemName: iconForTool(toolCall.function.name))
                         .font(.caption)
                         .foregroundStyle(.orange)
 
                     Text(displayNameForTool(toolCall.function.name))
-                        .font(.caption)
-                        .fontWeight(.medium)
+                        .font(.caption.weight(.medium))
                         .foregroundStyle(.primary)
 
                     Text(argumentsSummary)
@@ -131,48 +151,38 @@ struct ToolCallView: View {
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
+                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
             }
             .buttonStyle(.plain)
 
-            // Expanded arguments
+            // Expanded details
             if isExpanded {
                 Text(prettyArguments)
-                    .font(.system(.caption, design: .monospaced))
+                    .font(.system(size: 11, design: .monospaced))
                     .textSelection(.enabled)
-                    .padding(8)
+                    .padding(10)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color(.textBackgroundColor).opacity(0.5))
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
             }
         }
-        .padding(8)
-        .background(Color.orange.opacity(0.06))
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .background(Color.orange.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(
-            RoundedRectangle(cornerRadius: 6)
-                .stroke(Color.orange.opacity(0.2), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.orange.opacity(0.12), lineWidth: 1)
         )
     }
 
     private var argumentsSummary: String {
-        // Parse arguments JSON and show a brief summary
         guard let data = toolCall.function.arguments.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            return ""
-        }
-
-        if let command = json["command"] as? String {
-            return "$ \(command.prefix(60))"
-        }
-        if let target = json["target"] as? String {
-            return target
-        }
-        if let path = json["path"] as? String {
-            return path
-        }
-        if let url = json["url"] as? String {
-            return url.prefix(60).description
-        }
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return "" }
+        if let cmd = json["command"] as? String { return "$ \(cmd.prefix(50))" }
+        if let target = json["target"] as? String { return target }
+        if let path = json["path"] as? String { return path }
+        if let url = json["url"] as? String { return url.prefix(50).description }
+        if let name = json["name"] as? String { return name }
+        if let goal = json["goal"] as? String { return goal.prefix(50).description }
         return ""
     }
 
@@ -180,9 +190,7 @@ struct ToolCallView: View {
         guard let data = toolCall.function.arguments.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data),
               let pretty = try? JSONSerialization.data(withJSONObject: json, options: .prettyPrinted),
-              let str = String(data: pretty, encoding: .utf8) else {
-            return toolCall.function.arguments
-        }
+              let str = String(data: pretty, encoding: .utf8) else { return toolCall.function.arguments }
         return str
     }
 
@@ -194,6 +202,11 @@ struct ToolCallView: View {
         case "write_file": return "square.and.pencil"
         case "list_directory": return "folder"
         case "web_fetch": return "globe"
+        case "memory_store", "memory_search", "memory_list", "memory_delete": return "brain"
+        case "skill_create", "skill_run", "skill_list", "skill_delete": return "sparkles"
+        case "scratchpad_write", "scratchpad_read": return "note.text"
+        case "plan_task": return "checklist"
+        case "ask_user": return "questionmark.circle"
         default: return "wrench"
         }
     }
@@ -206,80 +219,99 @@ struct ToolCallView: View {
         case "write_file": return "Write File"
         case "list_directory": return "List Dir"
         case "web_fetch": return "Web Fetch"
-        default: return name
+        case "memory_store": return "Save Memory"
+        case "memory_search": return "Search Memory"
+        case "skill_run": return "Run Skill"
+        case "skill_create": return "Create Skill"
+        case "scratchpad_write": return "Write Notes"
+        case "scratchpad_read": return "Read Notes"
+        case "plan_task": return "Plan Task"
+        case "ask_user": return "Ask User"
+        default: return name.replacingOccurrences(of: "_", with: " ").capitalized
         }
     }
 }
 
-// MARK: - Tool Result Content View
+// MARK: - Inline Tool Result (collapsed by default)
 
-struct ToolResultContentView: View {
+struct InlineToolResultView: View {
     let text: String
-    @State private var isExpanded = true
+    @State private var isExpanded = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 0) {
             Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
+                withAnimation(.easeInOut(duration: 0.15)) {
                     isExpanded.toggle()
                 }
             } label: {
-                HStack {
-                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.caption2)
-                    Text("Output (\(text.count) chars)")
+                HStack(spacing: 8) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(.green.opacity(0.6))
+                        .frame(width: 3)
+
+                    Image(systemName: "checkmark.circle.fill")
                         .font(.caption)
+                        .foregroundStyle(.green)
+
+                    Text("Output")
+                        .font(.caption.weight(.medium))
+
+                    Text("(\(text.count) chars)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
                     Spacer()
+
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
                 }
-                .foregroundStyle(.secondary)
+                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
             }
             .buttonStyle(.plain)
 
             if isExpanded {
                 ScrollView(.horizontal, showsIndicators: false) {
                     Text(text)
-                        .font(.system(.caption, design: .monospaced))
+                        .font(.system(size: 11, design: .monospaced))
                         .textSelection(.enabled)
                         .lineLimit(nil)
                 }
-                .frame(maxHeight: 200)
-                .padding(8)
-                .background(Color(.textBackgroundColor).opacity(0.7))
-                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .frame(maxHeight: 250)
+                .padding(10)
+                .background(Color(.textBackgroundColor).opacity(0.5))
             }
         }
+        .background(Color.green.opacity(0.03))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.green.opacity(0.1), lineWidth: 1)
+        )
     }
 }
 
-// MARK: - Metadata View
+// MARK: - Metadata Bar
 
-struct MetadataView: View {
+struct MetadataBar: View {
     let metadata: MessageMetadata
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             if let model = metadata.model {
                 Label(model, systemImage: "cpu")
             }
-
             if let tokens = metadata.totalTokens {
-                Label("\(tokens) tokens", systemImage: "number")
+                Label("\(tokens) tok", systemImage: "number")
             }
-
             if let latency = metadata.latencyMs {
-                Label(formatLatency(latency), systemImage: "clock")
+                Label(latency < 1000 ? "\(latency)ms" : String(format: "%.1fs", Double(latency) / 1000.0), systemImage: "clock")
             }
         }
         .font(.caption2)
-        .foregroundStyle(.tertiary)
-        .padding(.top, 4)
-    }
-
-    private func formatLatency(_ ms: Int) -> String {
-        if ms < 1000 {
-            return "\(ms)ms"
-        } else {
-            return String(format: "%.1fs", Double(ms) / 1000.0)
-        }
+        .foregroundStyle(.quaternary)
+        .padding(.top, 2)
     }
 }
