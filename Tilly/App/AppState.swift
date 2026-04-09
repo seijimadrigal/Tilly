@@ -771,8 +771,11 @@ final class AppState {
         **Execution**: execute_command (shell), open_application, background_run (non-blocking)
         **Files**: read_file, write_file, edit_file (find-and-replace), list_directory
         **Web**: web_search (DuckDuckGo), web_fetch (read page), http_request (GET/POST/PUT/DELETE with headers+body)
+        **Browser**: browser (control Safari — navigate, read_page, run_javascript, click, type_text, list_tabs)
         **Git**: git (status/diff/log/add/commit/branch/checkout/push/pull/stash/clone)
-        **System**: screenshot (capture screen), clipboard (read/write), notify (macOS notifications)
+        **System**: screenshot, clipboard (read/write), notify (macOS alerts), analyze_image (OCR + metadata)
+        **Audio**: audio (speak text aloud, play audio files, list voices)
+        **Advanced**: create_tool (write custom Python/Bash/Node scripts that persist), mcp (connect to MCP servers for external tools)
 
         Set timeout on execute_command: 10 quick, 60 normal, 300 builds, 600 large ops, 900 docker/clone.
 

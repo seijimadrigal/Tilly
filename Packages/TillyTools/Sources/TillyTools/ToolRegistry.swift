@@ -69,6 +69,13 @@ public final class ToolRegistry: @unchecked Sendable {
         registry.register(ScratchpadReadTool(service: scratchpadService))
         registry.register(PlanTaskTool(service: scratchpadService))
 
+        // Browser, vision, audio, MCP, custom tools
+        registry.register(BrowserTool())
+        registry.register(VisionTool())
+        registry.register(AudioTool())
+        registry.register(MCPClientTool())
+        registry.register(CreateToolTool())
+
         // User interaction
         let askUser = AskUserTool()
         registry.register(askUser)
