@@ -7,6 +7,10 @@ import FirebaseCore
 import GoogleSignIn
 
 class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        FirebaseApp.configure()
+    }
+
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls {
             GIDSignIn.sharedInstance.handle(url)
@@ -17,21 +21,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct TillyApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @State private var appState = AppState()
-
-    init() {
-        FirebaseApp.configure()
-    }
+    @State private var appState: AppState?
 
     var body: some Scene {
         WindowGroup {
             Group {
-                if appState.authService.isSignedIn {
-                    ContentView()
-                        .environment(appState)
+                if let appState {
+                    if appState.authService.isSignedIn {
+                        ContentView()
+                            .environment(appState)
+                    } else {
+                        SignInView()
+                            .environment(appState)
+                    }
                 } else {
-                    SignInView()
-                        .environment(appState)
+                    ProgressView("Loading...")
+                        .onAppear {
+                            // Firebase is configured by AppDelegate before this runs
+                            appState = AppState()
+                        }
                 }
             }
             .onOpenURL { url in
@@ -39,13 +47,17 @@ struct TillyApp: App {
             }
         }
         .commands {
-            AppCommands(appState: appState)
+            if let appState {
+                AppCommands(appState: appState)
+            }
         }
 
         #if os(macOS)
         Settings {
-            SettingsView()
-                .environment(appState)
+            if let appState {
+                SettingsView()
+                    .environment(appState)
+            }
         }
         #endif
     }
