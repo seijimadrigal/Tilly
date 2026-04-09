@@ -113,8 +113,15 @@ struct SidebarView: View {
             }
         )) {
             ForEach(appState.sessions) { session in
-                SessionRowView(session: session)
+                SessionRowView(session: session, isActive: appState.currentSession?.id == session.id)
                     .tag(session.id)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            withAnimation { appState.deleteSession(session) }
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
                     .contextMenu {
                         Button("Delete", role: .destructive) {
                             appState.deleteSession(session)
@@ -128,17 +135,28 @@ struct SidebarView: View {
 
 struct SessionRowView: View {
     let session: Session
+    var isActive: Bool = false
+    @State private var isHovering = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(session.title)
-                .font(.body)
-                .lineLimit(1)
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(session.title)
+                    .font(.body)
+                    .fontWeight(isActive ? .medium : .regular)
+                    .lineLimit(1)
 
-            Text(session.updatedAt, style: .relative)
+                HStack(spacing: 4) {
+                    Text("\(session.messages.count) msgs")
+                    Text("·")
+                    Text(session.updatedAt, style: .relative)
+                }
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+            }
+            Spacer()
         }
         .padding(.vertical, 2)
+        .onHover { isHovering = $0 }
     }
 }

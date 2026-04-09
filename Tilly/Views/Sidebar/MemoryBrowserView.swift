@@ -5,7 +5,7 @@ import TillyStorage
 struct MemoryBrowserView: View {
     @Environment(AppState.self) private var appState
     @State private var memories: [MemoryEntry] = []
-    @State private var selectedMemory: MemoryEntry?
+    @State private var expandedMemoryID: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -27,25 +27,42 @@ struct MemoryBrowserView: View {
             .padding(.vertical, 6)
 
             if memories.isEmpty {
-                Text("No memories yet. The agent will store memories as you interact.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-            } else {
-                List(memories, selection: Binding(
-                    get: { selectedMemory?.id },
-                    set: { id in selectedMemory = memories.first { $0.id == id } }
-                )) { memory in
-                    MemoryRowView(memory: memory)
-                        .tag(memory.id)
-                        .contextMenu {
-                            Button("Delete", role: .destructive) {
-                                deleteMemory(memory)
-                            }
-                        }
+                VStack(spacing: 8) {
+                    Image(systemName: "brain")
+                        .font(.title2)
+                        .foregroundStyle(.tertiary)
+                    Text("No memories yet")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text("Tilly saves memories automatically as you interact.")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .multilineTextAlignment(.center)
                 }
-                .listStyle(.plain)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+                .padding(.horizontal, 12)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 4) {
+                        ForEach(memories) { memory in
+                            MemoryCardView(
+                                memory: memory,
+                                isExpanded: expandedMemoryID == memory.id,
+                                onTap: {
+                                    withAnimation(.easeInOut(duration: 0.15)) {
+                                        expandedMemoryID = expandedMemoryID == memory.id ? nil : memory.id
+                                    }
+                                },
+                                onDelete: {
+                                    deleteMemory(memory)
+                                }
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                }
             }
         }
         .onAppear { refreshMemories() }
@@ -56,30 +73,110 @@ struct MemoryBrowserView: View {
     }
 
     private func deleteMemory(_ memory: MemoryEntry) {
-        try? appState.memoryService.delete(name: memory.id)
-        refreshMemories()
+        withAnimation {
+            try? appState.memoryService.delete(name: memory.id)
+            refreshMemories()
+            if expandedMemoryID == memory.id {
+                expandedMemoryID = nil
+            }
+        }
     }
 }
 
-struct MemoryRowView: View {
+// MARK: - Memory Card (expandable)
+
+struct MemoryCardView: View {
     let memory: MemoryEntry
+    let isExpanded: Bool
+    let onTap: () -> Void
+    let onDelete: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 4) {
-                Image(systemName: iconForType(memory.type))
-                    .font(.caption2)
-                    .foregroundStyle(colorForType(memory.type))
-                Text(memory.name)
-                    .font(.caption)
-                    .lineLimit(1)
+        VStack(alignment: .leading, spacing: 0) {
+            // Header row — always visible, clickable
+            Button(action: onTap) {
+                HStack(spacing: 6) {
+                    Image(systemName: iconForType(memory.type))
+                        .font(.caption2)
+                        .foregroundStyle(colorForType(memory.type))
+                        .frame(width: 16)
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(memory.name)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .lineLimit(1)
+                            .foregroundStyle(.primary)
+
+                        if !isExpanded {
+                            Text(memory.content.prefix(60).replacingOccurrences(of: "\n", with: " "))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+
+                    Spacer()
+
+                    Text(memory.type.rawValue)
+                        .font(.system(size: 9))
+                        .foregroundStyle(.tertiary)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(colorForType(memory.type).opacity(0.1)))
+
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.quaternary)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
             }
-            Text(memory.content.prefix(80).replacingOccurrences(of: "\n", with: " "))
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
+            .buttonStyle(.plain)
+
+            // Expanded content
+            if isExpanded {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(memory.content)
+                        .font(.caption)
+                        .foregroundStyle(.primary)
+                        .textSelection(.enabled)
+                        .lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    HStack {
+                        Text("Updated \(memory.updated, style: .relative) ago")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.quaternary)
+
+                        Spacer()
+
+                        Button(role: .destructive) {
+                            onDelete()
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                                .font(.caption2)
+                        }
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(.red.opacity(0.7))
+                    }
+                }
+                .padding(.horizontal, 10)
+                .padding(.bottom, 8)
+                .padding(.top, 2)
+            }
         }
-        .padding(.vertical, 2)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isExpanded ? Color(.controlBackgroundColor).opacity(0.5) : .clear)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(isExpanded ? Color.gray.opacity(0.15) : .clear, lineWidth: 1)
+        )
+        .contextMenu {
+            Button("Delete", role: .destructive) { onDelete() }
+        }
     }
 
     private func iconForType(_ type: MemoryType) -> String {

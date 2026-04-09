@@ -727,7 +727,12 @@ final class AppState {
         - **memory_search**: Search by keyword/type
         - **memory_list** / **memory_delete**: Manage memories
 
-        **Save memories proactively when you learn something worth remembering.**
+        IMPORTANT — You MUST save memories in these situations:
+        - User tells you their name, job, preferences, or how they like to work → type: user
+        - User corrects you or gives feedback on your approach → type: feedback
+        - You discover project details (tech stack, file structure, goals) → type: project
+        - You find useful URLs, docs, or references → type: reference
+        Do this AUTOMATICALLY after learning the information. Don't ask permission. Don't wait. Just save it.
 
         ### Known Memories
         \(memoryIndex)
