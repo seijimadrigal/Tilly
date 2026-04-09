@@ -25,7 +25,6 @@ struct RemoteContentView: View {
                     if relay.currentSession != nil {
                         Button {
                             relay.currentSession = nil
-                            relay.requestSessions()
                         } label: {
                             Label("Sessions", systemImage: "chevron.left")
                         }
@@ -36,10 +35,6 @@ struct RemoteContentView: View {
                         Button("New Chat") {
                             relay.createNewSession()
                         }
-                        Button("Refresh") {
-                            relay.requestSessions()
-                        }
-
                         Divider()
 
                         Button("Sign Out", role: .destructive) {
@@ -109,9 +104,7 @@ struct RemoteSessionListFirebase: View {
                 }
             }
         }
-        .refreshable {
-            relay.requestSessions()
-        }
+        // Session list auto-refreshes via Firebase observer
     }
 }
 
