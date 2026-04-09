@@ -57,25 +57,56 @@ struct ChatView: View {
 }
 
 struct StreamingIndicatorView: View {
-    @State private var dotCount = 0
-    private let timer = Timer.publish(every: 0.4, on: .main, in: .common).autoconnect()
+    @Environment(AppState.self) private var appState
 
     var body: some View {
-        HStack {
-            HStack(spacing: 4) {
-                ForEach(0..<3) { i in
-                    Circle()
-                        .fill(Color.accentColor.opacity(i < dotCount ? 1.0 : 0.3))
-                        .frame(width: 6, height: 6)
-                }
+        HStack(spacing: 8) {
+            ProgressView()
+                .controlSize(.small)
+
+            if let toolName = appState.currentToolName {
+                Image(systemName: iconForTool(toolName))
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                Text(appState.currentToolSummary ?? toolName)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            } else {
+                Text("Thinking...")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+
             Spacer()
+
+            if appState.agentRound > 0 {
+                Text("Round \(appState.agentRound)")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Color.gray.opacity(0.15)))
+            }
         }
         .padding(.horizontal, 16)
-        .onReceive(timer) { _ in
-            dotCount = (dotCount % 3) + 1
+        .padding(.vertical, 8)
+    }
+
+    private func iconForTool(_ name: String) -> String {
+        switch name {
+        case "execute_command": return "terminal"
+        case "open_application": return "macwindow"
+        case "read_file": return "doc.text"
+        case "write_file": return "square.and.pencil"
+        case "list_directory": return "folder"
+        case "web_fetch": return "globe"
+        case "memory_store", "memory_search", "memory_list", "memory_delete": return "brain"
+        case "skill_create", "skill_run", "skill_list", "skill_delete": return "sparkles"
+        case "scratchpad_write", "scratchpad_read": return "note.text"
+        case "plan_task": return "checklist"
+        case "ask_user": return "questionmark.circle"
+        default: return "wrench"
         }
     }
 }

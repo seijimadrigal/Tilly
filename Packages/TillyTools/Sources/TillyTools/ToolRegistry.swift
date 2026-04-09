@@ -28,7 +28,8 @@ public final class ToolRegistry: @unchecked Sendable {
     /// Creates a registry with all built-in tools pre-registered.
     public static func withBuiltinTools(
         memoryService: MemoryService = MemoryService(),
-        skillService: SkillService = SkillService()
+        skillService: SkillService = SkillService(),
+        scratchpadService: ScratchpadService = ScratchpadService()
     ) -> ToolRegistry {
         let registry = ToolRegistry()
 
@@ -51,6 +52,11 @@ public final class ToolRegistry: @unchecked Sendable {
         registry.register(SkillListTool(service: skillService))
         registry.register(SkillRunTool(service: skillService))
         registry.register(SkillDeleteTool(service: skillService))
+
+        // Scratchpad / planning tools
+        registry.register(ScratchpadWriteTool(service: scratchpadService))
+        registry.register(ScratchpadReadTool(service: scratchpadService))
+        registry.register(PlanTaskTool(service: scratchpadService))
 
         // User interaction
         let askUser = AskUserTool()

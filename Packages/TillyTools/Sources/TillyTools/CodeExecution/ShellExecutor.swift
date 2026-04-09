@@ -92,11 +92,41 @@ public final class ShellExecutor: ToolExecutable, @unchecked Sendable {
             }
         }
 
+        let timeout = Self.resolveTimeout(for: args.command, explicit: args.timeout)
         return await runCommand(
             args.command,
             workingDirectory: args.working_directory,
-            timeout: args.timeout ?? defaultTimeout
+            timeout: timeout
         )
+    }
+
+    // MARK: - Dynamic Timeout Resolution
+
+    /// Resolve timeout based on command type. User's explicit timeout always wins.
+    static func resolveTimeout(for command: String, explicit: Double?) -> TimeInterval {
+        if let explicit { return explicit }
+
+        let cmd = command.lowercased()
+
+        // Quick commands: 10 seconds
+        let quickPattern = #"^\s*(ls|cat|echo|pwd|whoami|which|date|head|tail|wc|file|stat|basename|dirname|hostname|uname|env|printenv|id|groups)\b"#
+        if matches(cmd, pattern: quickPattern) { return 10 }
+
+        // Build/install commands: 10 minutes
+        let buildPattern = #"\b(brew|npm|npx|yarn|pnpm|pip3?|cargo|make|cmake|xcodebuild|swift\s+(build|test|package|run)|go\s+(build|test|install)|pod\s+install|bundle\s+install|gradle|mvn|dotnet\s+build|flutter\s+build|composer\s+install)\b"#
+        if matches(cmd, pattern: buildPattern) { return 600 }
+
+        // Long-running commands: 15 minutes
+        let longPattern = #"\b(docker\s+(build|compose|pull)|git\s+clone|rsync|wget|curl\s+.*-[oO]|tar\s+.*[xczf]|zip\s+-r|unzip)\b"#
+        if matches(cmd, pattern: longPattern) { return 900 }
+
+        // Default: 60 seconds (up from 30)
+        return 60
+    }
+
+    private static func matches(_ text: String, pattern: String) -> Bool {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else { return false }
+        return regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) != nil
     }
 
     /// Returns the matched destructive pattern label, or nil if command is safe.

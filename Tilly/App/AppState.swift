@@ -35,7 +35,12 @@ final class AppState {
     // MARK: - Tools
     let toolRegistry: ToolRegistry
     var toolsEnabled: Bool = true
-    private let maxToolRounds = 15
+    private let maxToolRounds = 50
+
+    // MARK: - Progress Visibility
+    var agentRound: Int = 0
+    var currentToolName: String?
+    var currentToolSummary: String?
 
     // MARK: - Auth & Remote
     let authService = AuthService()
@@ -47,12 +52,14 @@ final class AppState {
     let memoryService = MemoryService()
     let skillService = SkillService()
     let sessionService = SessionService()
+    let scratchpadService = ScratchpadService()
     private var providers: [ProviderID: any LLMProvider] = [:]
 
     init() {
         toolRegistry = ToolRegistry.withBuiltinTools(
             memoryService: memoryService,
-            skillService: skillService
+            skillService: skillService,
+            scratchpadService: scratchpadService
         )
         setupAskUserHandler()
         setupFirebaseRelay()
@@ -187,6 +194,7 @@ final class AppState {
     }
 
     func createNewSession() {
+        scratchpadService.clear()
         let session = Session(
             systemPrompt: SystemPrompt(
                 name: "Agent",
@@ -303,7 +311,19 @@ final class AppState {
 
     /// The core agent loop: stream -> detect tool calls -> execute -> repeat
     private func runAgentLoop(session: inout Session, provider: any LLMProvider) async throws {
-        for _ in 0..<maxToolRounds {
+        agentRound = 0
+
+        for round in 0..<maxToolRounds {
+            agentRound = round + 1
+
+            // Checkpoint every 10 rounds
+            if round > 0 && round % 10 == 0 {
+                scratchpadService.append(
+                    section: "Progress",
+                    content: "Checkpoint at round \(round)/\(maxToolRounds)"
+                )
+            }
+
             let chatMessages = buildChatMessages(from: session)
             let tools = toolsEnabled ? toolRegistry.definitions : nil
 
@@ -321,22 +341,70 @@ final class AppState {
             )
 
             if !result.toolCalls.isEmpty {
-                for toolCall in result.toolCalls {
-                    let toolResult = await executeToolCall(toolCall)
+                // Execute all tool calls in parallel
+                let toolCalls = result.toolCalls
+                let registry = toolRegistry
 
-                    let toolMessage = Message(
-                        role: .tool,
-                        content: [.text(toolResult.content)],
-                        toolCallID: toolCall.id
-                    )
-                    session.appendMessage(toolMessage)
-                    updateCurrentSession(session)
+                let toolResults: [(ToolCall, ToolResult)] = await withTaskGroup(
+                    of: (ToolCall, ToolResult).self,
+                    returning: [(ToolCall, ToolResult)].self
+                ) { group in
+                    for tc in toolCalls {
+                        group.addTask {
+                            let result: ToolResult
+                            do {
+                                result = try await registry.execute(toolCall: tc)
+                            } catch {
+                                result = ToolResult(content: "Tool error: \(error.localizedDescription)", isError: true)
+                            }
+                            return (tc, result)
+                        }
+                    }
+                    var results: [(ToolCall, ToolResult)] = []
+                    for await pair in group { results.append(pair) }
+                    return results
                 }
+
+                // Append results in original order
+                for tc in toolCalls {
+                    if let (_, toolResult) = toolResults.first(where: { $0.0.id == tc.id }) {
+                        currentToolName = tc.function.name
+                        currentToolSummary = extractToolSummary(tc)
+
+                        let toolMessage = Message(
+                            role: .tool,
+                            content: [.text(toolResult.content)],
+                            toolCallID: tc.id
+                        )
+                        session.appendMessage(toolMessage)
+                        updateCurrentSession(session)
+                    }
+                }
+                currentToolName = nil
+                currentToolSummary = nil
                 continue
             }
 
             break
         }
+        agentRound = 0
+        currentToolName = nil
+        currentToolSummary = nil
+    }
+
+    /// Extract a brief summary from tool call arguments for progress display.
+    private func extractToolSummary(_ toolCall: ToolCall) -> String {
+        guard let data = toolCall.function.arguments.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return toolCall.function.name
+        }
+        if let cmd = json["command"] as? String { return "$ \(String(cmd.prefix(60)))" }
+        if let target = json["target"] as? String { return target }
+        if let path = json["path"] as? String { return path }
+        if let url = json["url"] as? String { return String(url.prefix(60)) }
+        if let name = json["name"] as? String { return name }
+        if let goal = json["goal"] as? String { return String(goal.prefix(60)) }
+        return toolCall.function.name
     }
 
     /// Stream a single completion and return accumulated tool calls (if any).
@@ -565,7 +633,40 @@ final class AppState {
             }
         }
 
-        return messages
+        // Context compression: if estimated tokens exceed budget, prune old messages
+        return compressIfNeeded(messages)
+    }
+
+    /// Estimate token count (~4 chars per token) and prune old messages if over budget.
+    private func compressIfNeeded(_ messages: [ChatCompletionRequest.ChatMessage]) -> [ChatCompletionRequest.ChatMessage] {
+        let contextBudget = 80_000  // Conservative budget for most models
+        let threshold = contextBudget * 60 / 100  // Compress at 60%
+
+        let totalChars = messages.reduce(0) { $0 + ($1.content?.count ?? 0) }
+        let estimatedTokens = totalChars / 4
+
+        guard estimatedTokens > threshold else { return messages }
+
+        // Keep: system prompt (first), last 10 messages
+        guard messages.count > 11 else { return messages }
+
+        let systemPrompt = messages[0]
+        let middleMessages = Array(messages[1..<(messages.count - 10)])
+        let recentMessages = Array(messages.suffix(10))
+
+        // Summarize the middle (oldest) messages
+        let summary = middleMessages.prefix(20).compactMap { msg -> String? in
+            guard let content = msg.content, !content.isEmpty else { return nil }
+            let preview = String(content.prefix(100)).replacingOccurrences(of: "\n", with: " ")
+            return "[\(msg.role)]: \(preview)"
+        }.joined(separator: "\n")
+
+        let compressionNote = ChatCompletionRequest.ChatMessage(
+            role: "system",
+            content: "[Context compressed: \(middleMessages.count) older messages summarized]\n\(summary)"
+        )
+
+        return [systemPrompt, compressionNote] + recentMessages
     }
 
     // MARK: - Types
@@ -587,72 +688,63 @@ final class AppState {
     func buildDynamicSystemPrompt() -> String {
         let memoryIndex = memoryService.loadIndex()
         let skillIndex = skillService.loadIndex()
+        let scratchpad = scratchpadService.read()
 
         return """
-        You are Tilly, a powerful AI agent running as a native macOS application. You have direct access to the user's computer through tools, persistent memory across sessions, and a reusable skill library.
+        You are Tilly, a powerful AI agent running as a native macOS application. You have direct access to the user's computer through tools, persistent memory, a skill library, and working scratchpad.
 
         ## Core Tools
+        - **execute_command**: Shell commands via /bin/zsh. Timeouts auto-adjust: 10s quick cmds, 60s default, 10min builds, 15min long-running.
+        - **open_application**: Open macOS apps, files, or URLs.
+        - **read_file**: Read file contents with optional line range.
+        - **write_file**: Write or append to files.
+        - **list_directory**: List directory contents.
+        - **web_fetch**: Fetch and read web page content.
 
-        ### execute_command
-        Run any shell command on macOS via /bin/zsh.
+        ## Working Scratchpad (Session Memory)
+        Your working memory for the current task. Use it to stay organized during complex work.
+        - **scratchpad_write**: Write/append sections (Plan, Progress, Findings, Notes)
+        - **scratchpad_read**: Read current scratchpad
+        - **plan_task**: Create a structured plan with numbered steps
 
-        ### open_application
-        Open macOS applications, files, or URLs.
+        ### Current Scratchpad
+        \(scratchpad.isEmpty ? "(empty — use plan_task to start)" : scratchpad)
 
-        ### read_file
-        Read file contents with optional line range.
+        ## Persistent Memory (Cross-Session)
+        - **memory_store**: Save info (types: user, feedback, project, reference)
+        - **memory_search**: Search by keyword/type
+        - **memory_list** / **memory_delete**: Manage memories
 
-        ### write_file
-        Write or append to files.
-
-        ### list_directory
-        List directory contents.
-
-        ### web_fetch
-        Fetch and read web page content.
-
-        ## Memory System
-
-        You have persistent memory that survives across sessions.
-
-        - **memory_store**: Save information (user preferences, project context, feedback)
-        - **memory_search**: Search memories by keyword or type
-        - **memory_list**: See all stored memories
-        - **memory_delete**: Remove outdated memories
-
-        Memory types: `user`, `feedback`, `project`, `reference`.
-
-        **IMPORTANT: Proactively save memories when you learn something about the user, their preferences, their projects, or receive feedback. Do this automatically without being asked.**
+        **Save memories proactively when you learn something worth remembering.**
 
         ### Known Memories
         \(memoryIndex)
 
         ## Skill Library
-
-        - **skill_create**: Save a reusable workflow
-        - **skill_run**: Execute a saved skill
-        - **skill_list**: See available skills
-        - **skill_delete**: Remove a skill
+        - **skill_create** / **skill_run** / **skill_list** / **skill_delete**
 
         ### Available Skills
         \(skillIndex)
 
-        ## Ask User
-
-        - **ask_user**: When you are unsure how to proceed, use this tool to ask the user a question with 3 options. Use this for:
-          - Ambiguous requests where multiple approaches are possible
-          - Before destructive or irreversible actions
-          - When you need user preference or confirmation
-          - When a task could go multiple directions
+        ## User Interaction
+        - **ask_user**: Ask the user a question with 3 options when unsure.
 
         ## Guidelines
 
-        1. **Be proactive with tools.** Actually do things, don't explain how.
-        2. **Save memories automatically.** When you learn something worth remembering, use memory_store immediately.
-        3. **Ask when unsure.** Use ask_user when you face ambiguity or need confirmation.
-        4. **Read before modifying.** Always read files before editing.
-        5. **Handle errors gracefully.** Try alternatives on failure.
-        6. **No destructive commands without confirmation.** Use ask_user first.
+        1. **Plan before executing.** For tasks needing 3+ tool calls, use plan_task first.
+        2. **Be proactive.** Actually do things, don't explain how.
+        3. **Use the scratchpad.** Track progress, record findings, update your plan.
+        4. **Save memories.** When you learn user preferences, project context, or feedback — save it immediately.
+        5. **Ask when unsure.** Use ask_user for ambiguity or before destructive actions.
+        6. **Read before modifying.** Always read files before editing.
+        7. **Handle errors gracefully.** Try alternatives on failure.
+        8. **No destructive commands without confirmation.**
+
+        ## Self-Improvement
+        After completing a multi-step task (5+ tool calls):
+        1. If the workflow was useful and reusable, save it as a skill (skill_create).
+        2. Store what worked/didn't as a feedback memory (memory_store, type: feedback).
+        3. Only do this for genuinely reusable patterns, not one-off tasks.
         """
     }
 }
