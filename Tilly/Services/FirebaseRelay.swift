@@ -169,7 +169,7 @@ final class FirebaseRelay {
         case .newSession:
             appState.createNewSession()
             if let session = appState.currentSession {
-                sendToiOS(RemoteMessage(type: .sessionCreated, session: session))
+                sendToiOS(RemoteMessage(type: .sessionCreated, session: stripHeavyContent(from: session)))
             }
 
         case .askUserResponse:
@@ -182,19 +182,39 @@ final class FirebaseRelay {
         }
     }
 
-    /// Strip heavy binary content (images) from session for Firebase transfer.
-    /// Keeps text, file references, tool calls — just removes raw image Data.
+    /// Strip heavy content and limit messages for Firebase transfer.
+    /// Firebase drops connection on large writes (~100KB+).
     private func stripHeavyContent(from session: Session) -> Session {
         var light = session
-        light.messages = session.messages.map { msg in
+        // Only send last 30 messages to keep payload under 20KB
+        let recentMessages = Array(session.messages.suffix(30))
+        light.messages = recentMessages.map { msg in
             var m = msg
-            m.content = msg.content.map { block in
+            m.content = msg.content.compactMap { block in
                 switch block {
-                case .image(_, let mimeType):
-                    // Replace image data with a text placeholder
-                    return .text("[Image: \(mimeType)]")
-                default:
+                case .text(let text):
+                    // Truncate very long text blocks
+                    if text.count > 2000 {
+                        return .text(String(text.prefix(2000)) + "\n... [truncated]")
+                    }
                     return block
+                case .image(_, let mimeType):
+                    return .text("[Image: \(mimeType)]")
+                case .fileReference:
+                    return block
+                }
+            }
+            // Strip tool call arguments if very long
+            if let toolCalls = m.toolCalls {
+                m.toolCalls = toolCalls.map { tc in
+                    let args = tc.function.arguments
+                    if args.count > 500 {
+                        return ToolCall(id: tc.id, function: ToolCall.FunctionCall(
+                            name: tc.function.name,
+                            arguments: String(args.prefix(500)) + "..."
+                        ))
+                    }
+                    return tc
                 }
             }
             return m
