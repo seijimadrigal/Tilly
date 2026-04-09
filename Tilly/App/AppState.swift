@@ -9,9 +9,14 @@ import TillyTools
 @Observable
 final class AppState {
     // MARK: - Provider Management
+    private enum DefaultsKey {
+        static let selectedProviderID = "selectedProviderID"
+        static let selectedModelID = "selectedModelID"
+    }
+
     var providerConfigs: [ProviderConfiguration] = ProviderConfiguration.defaults
     var selectedProviderID: ProviderID = .zaiCoding
-    var selectedModelID: String = "glm-4-flash"
+    var selectedModelID: String = "glm-5.1"
     var availableModels: [ModelInfo] = []
     var isLoadingModels: Bool = false
 
@@ -32,8 +37,9 @@ final class AppState {
     var toolsEnabled: Bool = true
     private let maxToolRounds = 15
 
-    // MARK: - Remote Control
-    let remoteServer = RemoteServer()
+    // MARK: - Auth & Remote
+    let authService = AuthService()
+    let firebaseRelay = FirebaseRelay()
     var onStreamDelta: ((String) -> Void)?
 
     // MARK: - Services
@@ -49,19 +55,54 @@ final class AppState {
             skillService: skillService
         )
         setupAskUserHandler()
-        setupRemoteServer()
+        setupFirebaseRelay()
         initializeProviders()
         loadSessions()
+        restoreProviderSelection()
+        authService.restoreSession()
     }
 
-    private func setupRemoteServer() {
-        remoteServer.appState = self
-        remoteServer.start()
-        // Bridge streaming deltas to connected iOS clients
+    // MARK: - Provider Selection Persistence
+
+    private func restoreProviderSelection() {
+        if let savedRaw = UserDefaults.standard.string(forKey: DefaultsKey.selectedProviderID),
+           let saved = ProviderID(rawValue: savedRaw) {
+            selectedProviderID = saved
+        }
+        if let savedModel = UserDefaults.standard.string(forKey: DefaultsKey.selectedModelID),
+           !savedModel.isEmpty {
+            selectedModelID = savedModel
+        }
+    }
+
+    func saveProviderSelection() {
+        UserDefaults.standard.set(selectedProviderID.rawValue, forKey: DefaultsKey.selectedProviderID)
+        UserDefaults.standard.set(selectedModelID, forKey: DefaultsKey.selectedModelID)
+        // Sync to Firebase for cross-device persistence
+        firebaseRelay.syncSettings(providerID: selectedProviderID.rawValue, modelID: selectedModelID)
+    }
+
+    private func setupFirebaseRelay() {
+        firebaseRelay.appState = self
+        // Bridge streaming deltas to iOS via Firebase
         onStreamDelta = { [weak self] delta in
-            self?.remoteServer.broadcast(
+            self?.firebaseRelay.sendToiOS(
                 RemoteMessage(type: .streamDelta, text: delta)
             )
+        }
+    }
+
+    /// Called after sign-in to start the Firebase relay
+    func onAuthStateChanged() {
+        if let uid = authService.userID {
+            firebaseRelay.start(userID: uid)
+            // Sync settings to Firebase
+            firebaseRelay.syncSettings(
+                providerID: selectedProviderID.rawValue,
+                modelID: selectedModelID
+            )
+        } else {
+            firebaseRelay.stop()
         }
     }
 
@@ -76,7 +117,7 @@ final class AppState {
 
     private func showAskUserPopup(question: String, options: [String]) async -> String {
         // Also broadcast to iOS clients
-        remoteServer.broadcast(RemoteMessage(
+        firebaseRelay.sendToiOS(RemoteMessage(
             type: .askUser,
             text: question,
             options: options
@@ -235,9 +276,9 @@ final class AppState {
         isStreaming = false
 
         // Notify remote clients that streaming is done
-        remoteServer.broadcast(RemoteMessage(type: .streamEnd))
+        firebaseRelay.sendToiOS(RemoteMessage(type: .streamEnd))
         if let session = currentSession {
-            remoteServer.broadcast(RemoteMessage(type: .fullSession, session: session))
+            firebaseRelay.sendToiOS(RemoteMessage(type: .fullSession, session: session))
         }
 
         // Auto-generate title via LLM after first exchange

@@ -73,7 +73,7 @@ public struct ProviderConfiguration: Codable, Sendable, Identifiable, Equatable 
             providerID: .zaiCoding,
             displayName: "ZAI Coding",
             baseURL: URL(string: "https://api.z.ai/api/coding/paas/v4")!,
-            defaultModel: "glm-4-flash"
+            defaultModel: "glm-5.1"
         ),
     ]
 }

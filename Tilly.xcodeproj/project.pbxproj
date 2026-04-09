@@ -7,46 +7,62 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		061EC42F7F2355B4EC80B9D1 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 8C6547B00D8B83B42613C6EC /* FirebaseAuth */; };
 		081117EAFF7088259E542D4A /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7714F7D37E3C1AE987EAE62 /* AppState.swift */; };
 		18634CDFD62DBD5A4571B6DD /* MessageContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2AE45D10BB1F0066765B9A6 /* MessageContentView.swift */; };
 		228D0C682B4DD293DBF8751E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EFCDF4FAD0857382E309F2E1 /* Assets.xcassets */; };
+		2B47E44C85F561AEFE05F6D8 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = AC138233DC34F304AFF7022E /* FirebaseDatabase */; };
+		32F2EBB7E8409FC7C9E989AE /* FirebaseRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60CA60FD3AA2EF8AD6FC963A /* FirebaseRelay.swift */; };
+		352C541AA66FEC82ABFD4B1B /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = C73A81C3E2D23BD40FC10966 /* GoogleService-Info.plist */; };
 		35953C20FEBE657284212099 /* TillyTools in Frameworks */ = {isa = PBXBuildFile; productRef = 4549431E15F91AEBCB52AA51 /* TillyTools */; };
+		425916D524D5EBD17B859F90 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = D6DBE6A558498254AABC3C73 /* GoogleService-Info.plist */; };
 		4397EEF8ADF15BB331027A47 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7539F33A7EFEFEF5758F954 /* SidebarView.swift */; };
+		4F39B182E9BC9F51D0F87387 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 800096BCD889E9FC5045AFC2 /* GoogleSignIn */; };
 		50A406395CF1EDD23D21F168 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B2F3390EB981E65499E8770 /* SettingsView.swift */; };
+		52F39663C346816AAE5B5E55 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C151A060A75E2FAF23B86943 /* SignInView.swift */; };
 		5A10D82BFAD30352F6170C9A /* TillyCore in Frameworks */ = {isa = PBXBuildFile; productRef = B64A66864A186E577D58E430 /* TillyCore */; };
-		5ED60A83B1FCB2F5577BB07F /* RemoteClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE6F207E338568AA477D13EB /* RemoteClient.swift */; };
+		61A93D2DBF8252EEB722A12F /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4960611D38330D558F611FE8 /* SignInView.swift */; };
 		6AAE6F89D9A28BAF3878ABC0 /* TillyStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 41D604BDF3CE4BE6C9C398C8 /* TillyStorage */; };
+		6AF164B05D1390D2E88BB423 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 55B44A26794936896895EE78 /* GoogleSignIn */; };
+		71C0DB8586416C453E61DC1C /* RemoteMacStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2747F1D17580BBF46EF32268 /* RemoteMacStatusView.swift */; };
+		7526B445B5898F9AD702352C /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = C2F312B01A6994FA435646AD /* FirebaseDatabase */; };
+		77162C6968EA9D5587652479 /* FirebaseRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C3DBBEFA221356A5859B0D8 /* FirebaseRelay.swift */; };
 		79BC565A6D6CB7EB2D448C7F /* TillyRemoteApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 627C01D94D3C5900E57F857D /* TillyRemoteApp.swift */; };
+		7E311A25624A8AB2E0AB2825 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = E19BC910B1B688CCDE11EF42 /* GoogleSignInSwift */; };
+		90D25607992378A8D9EFA4A1 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 3ED982342F0E530444BEF5E5 /* GoogleSignInSwift */; };
 		93F132421C0AFC4B42812464 /* AppCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0391F5766AB5078D5BC063 /* AppCommands.swift */; };
 		947BC7FC90CE33B197B35BCA /* TillyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A13ACCD4FBF537ADE9A0734 /* TillyApp.swift */; };
 		992B4093B0D0631990EBD38E /* MemoryBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 284A846CCC67E7D89529FE2C /* MemoryBrowserView.swift */; };
+		9ED5B3A300C8CFB39F05946B /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3911FCF3D620AFFCE1F39BA6 /* AuthService.swift */; };
 		A197CFE0888845B000B2DC32 /* TillyCore in Frameworks */ = {isa = PBXBuildFile; productRef = 12341AC689D4CF663BEC3587 /* TillyCore */; };
 		A62C7B0C85A93C1FA7A21396 /* RemoteContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 480176AEFE0E2CE531D0FE75 /* RemoteContentView.swift */; };
-		A6E90E7E3DCB4A169EAB202A /* RemoteConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFE0B9AE798B87202DBCFDA3 /* RemoteConnectionView.swift */; };
-		C334173BBDB0A58AAB196B04 /* RemoteChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0041FC5B88A8254961BE31A0 /* RemoteChatView.swift */; };
-		C4872449BE50076281EE5670 /* RemoteServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19E5635B66911A154EABA48 /* RemoteServer.swift */; };
-		C6D43896BFA1B26F43F5545A /* RemoteSessionListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7049607340B0D863BDDE4F64 /* RemoteSessionListView.swift */; };
 		C9A5EA6E59400D999D4688A4 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A2D5E48C00DA600676E68B5 /* ContentView.swift */; };
 		CAECE438EBA8E08CF5EC3858 /* TillyProviders in Frameworks */ = {isa = PBXBuildFile; productRef = 0184A2A8C2F8F70485EEEC86 /* TillyProviders */; };
 		CC717D363813E811C3EA95C9 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C5ED9A99FF27D0D2869F82C /* ChatView.swift */; };
 		D47983A3F0BDFDB50BEF59D9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 71DA0E94FACD996ED7607F9C /* Assets.xcassets */; };
 		ED6F4EBC715D9F5721BC5E4E /* InputBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362249974F6531D337040ED5 /* InputBarView.swift */; };
 		F3415953B7BEC11C7533FD5F /* SkillBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69477CA7E4BAA8FB7123141D /* SkillBrowserView.swift */; };
+		F5CC56D3E12B84FF1683736D /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 9E47E74586F91633EF678E5F /* FirebaseAuth */; };
+		FAD6EA9F92CFE9B85DF30DE2 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21ADB93C2860F3A164136A34 /* AuthService.swift */; };
 		FED2CB3442AE8B004678DCE4 /* MessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D7DB2AB7E6C97C4B5FBF5DE /* MessageView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		0041FC5B88A8254961BE31A0 /* RemoteChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteChatView.swift; sourceTree = "<group>"; };
-		21D2BFF89B7A7E7C9BEE38B7 /* TillyRemote.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TillyRemote.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1C3DBBEFA221356A5859B0D8 /* FirebaseRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseRelay.swift; sourceTree = "<group>"; };
+		21ADB93C2860F3A164136A34 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		21D2BFF89B7A7E7C9BEE38B7 /* TillyRemote.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TillyRemote.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2747F1D17580BBF46EF32268 /* RemoteMacStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteMacStatusView.swift; sourceTree = "<group>"; };
 		284A846CCC67E7D89529FE2C /* MemoryBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryBrowserView.swift; sourceTree = "<group>"; };
 		317F09C0FAE8D0CEC4ACC685 /* TillyProviders */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TillyProviders; path = Packages/TillyProviders; sourceTree = SOURCE_ROOT; };
 		362249974F6531D337040ED5 /* InputBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputBarView.swift; sourceTree = "<group>"; };
+		3911FCF3D620AFFCE1F39BA6 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		3A13ACCD4FBF537ADE9A0734 /* TillyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TillyApp.swift; sourceTree = "<group>"; };
 		3C5ED9A99FF27D0D2869F82C /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		480176AEFE0E2CE531D0FE75 /* RemoteContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteContentView.swift; sourceTree = "<group>"; };
+		4960611D38330D558F611FE8 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
+		60CA60FD3AA2EF8AD6FC963A /* FirebaseRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseRelay.swift; sourceTree = "<group>"; };
 		627C01D94D3C5900E57F857D /* TillyRemoteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TillyRemoteApp.swift; sourceTree = "<group>"; };
 		69477CA7E4BAA8FB7123141D /* SkillBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillBrowserView.swift; sourceTree = "<group>"; };
-		7049607340B0D863BDDE4F64 /* RemoteSessionListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteSessionListView.swift; sourceTree = "<group>"; };
 		71DA0E94FACD996ED7607F9C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		8B2F3390EB981E65499E8770 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		8D7DB2AB7E6C97C4B5FBF5DE /* MessageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageView.swift; sourceTree = "<group>"; };
@@ -55,16 +71,16 @@
 		AA0391F5766AB5078D5BC063 /* AppCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCommands.swift; sourceTree = "<group>"; };
 		AA200997105B0DA4161B7947 /* TillyStorage */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TillyStorage; path = Packages/TillyStorage; sourceTree = SOURCE_ROOT; };
 		AB91B2CD9A2BF1D6165028B0 /* TillyTools */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TillyTools; path = Packages/TillyTools; sourceTree = SOURCE_ROOT; };
-		AE6F207E338568AA477D13EB /* RemoteClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteClient.swift; sourceTree = "<group>"; };
 		B2AE45D10BB1F0066765B9A6 /* MessageContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageContentView.swift; sourceTree = "<group>"; };
 		B56BEFD271A41F6BB08E777E /* Tilly.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tilly.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B7539F33A7EFEFEF5758F954 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
+		C151A060A75E2FAF23B86943 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
 		C3AEA6B0E80FCAEEFBDFF339 /* TillyCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TillyCore; path = Packages/TillyCore; sourceTree = SOURCE_ROOT; };
+		C73A81C3E2D23BD40FC10966 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		D574CAEF69385E8BFF9B7F45 /* Tilly.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tilly.entitlements; sourceTree = "<group>"; };
-		E19E5635B66911A154EABA48 /* RemoteServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteServer.swift; sourceTree = "<group>"; };
+		D6DBE6A558498254AABC3C73 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		EFCDF4FAD0857382E309F2E1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F7714F7D37E3C1AE987EAE62 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
-		FFE0B9AE798B87202DBCFDA3 /* RemoteConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteConnectionView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -76,6 +92,10 @@
 				CAECE438EBA8E08CF5EC3858 /* TillyProviders in Frameworks */,
 				6AAE6F89D9A28BAF3878ABC0 /* TillyStorage in Frameworks */,
 				35953C20FEBE657284212099 /* TillyTools in Frameworks */,
+				F5CC56D3E12B84FF1683736D /* FirebaseAuth in Frameworks */,
+				7526B445B5898F9AD702352C /* FirebaseDatabase in Frameworks */,
+				4F39B182E9BC9F51D0F87387 /* GoogleSignIn in Frameworks */,
+				7E311A25624A8AB2E0AB2825 /* GoogleSignInSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -84,6 +104,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				5A10D82BFAD30352F6170C9A /* TillyCore in Frameworks */,
+				061EC42F7F2355B4EC80B9D1 /* FirebaseAuth in Frameworks */,
+				2B47E44C85F561AEFE05F6D8 /* FirebaseDatabase in Frameworks */,
+				6AF164B05D1390D2E88BB423 /* GoogleSignIn in Frameworks */,
+				90D25607992378A8D9EFA4A1 /* GoogleSignInSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -128,6 +152,7 @@
 				92919DD2E1C1178C02F5E34A /* Services */,
 				AE0085A10CDF9A0B6AF107D1 /* Views */,
 				EFCDF4FAD0857382E309F2E1 /* Assets.xcassets */,
+				C73A81C3E2D23BD40FC10966 /* GoogleService-Info.plist */,
 				997A8B9E2CE32343B11A6DCB /* TillyRemote.entitlements */,
 				627C01D94D3C5900E57F857D /* TillyRemoteApp.swift */,
 			);
@@ -139,6 +164,14 @@
 			children = (
 			);
 			path = SystemPrompt;
+			sourceTree = "<group>";
+		};
+		2C37FC0FB1824B00FE597F8C /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				C151A060A75E2FAF23B86943 /* SignInView.swift */,
+			);
+			path = Auth;
 			sourceTree = "<group>";
 		};
 		35918EFDA0B105E352EDBE97 /* Chat */ = {
@@ -158,6 +191,7 @@
 		53DBE898B99A5040CDD57B4F /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				2C37FC0FB1824B00FE597F8C /* Auth */,
 				A5B9530F82B4F6A90703D210 /* Chat */,
 				257EF4FF1812AD3DE4E90D4E /* CodeReview */,
 				F8805B096768835EAB78D46F /* Settings */,
@@ -186,7 +220,8 @@
 		92919DD2E1C1178C02F5E34A /* Services */ = {
 			isa = PBXGroup;
 			children = (
-				AE6F207E338568AA477D13EB /* RemoteClient.swift */,
+				21ADB93C2860F3A164136A34 /* AuthService.swift */,
+				60CA60FD3AA2EF8AD6FC963A /* FirebaseRelay.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -214,10 +249,9 @@
 		AE0085A10CDF9A0B6AF107D1 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				0041FC5B88A8254961BE31A0 /* RemoteChatView.swift */,
-				FFE0B9AE798B87202DBCFDA3 /* RemoteConnectionView.swift */,
 				480176AEFE0E2CE531D0FE75 /* RemoteContentView.swift */,
-				7049607340B0D863BDDE4F64 /* RemoteSessionListView.swift */,
+				2747F1D17580BBF46EF32268 /* RemoteMacStatusView.swift */,
+				4960611D38330D558F611FE8 /* SignInView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -266,6 +300,7 @@
 				E916DB19570033D41FDC4870 /* Services */,
 				53DBE898B99A5040CDD57B4F /* Views */,
 				71DA0E94FACD996ED7607F9C /* Assets.xcassets */,
+				D6DBE6A558498254AABC3C73 /* GoogleService-Info.plist */,
 				D574CAEF69385E8BFF9B7F45 /* Tilly.entitlements */,
 				3A13ACCD4FBF537ADE9A0734 /* TillyApp.swift */,
 			);
@@ -281,7 +316,8 @@
 				F1EF5178FD034BF4FFAE470A /* Provider */,
 				66EBD13FA996530F16905E10 /* Session */,
 				845897DD893C6178D3BA7E4C /* Tool */,
-				E19E5635B66911A154EABA48 /* RemoteServer.swift */,
+				3911FCF3D620AFFCE1F39BA6 /* AuthService.swift */,
+				1C3DBBEFA221356A5859B0D8 /* FirebaseRelay.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -322,6 +358,10 @@
 				0184A2A8C2F8F70485EEEC86 /* TillyProviders */,
 				41D604BDF3CE4BE6C9C398C8 /* TillyStorage */,
 				4549431E15F91AEBCB52AA51 /* TillyTools */,
+				9E47E74586F91633EF678E5F /* FirebaseAuth */,
+				C2F312B01A6994FA435646AD /* FirebaseDatabase */,
+				800096BCD889E9FC5045AFC2 /* GoogleSignIn */,
+				E19BC910B1B688CCDE11EF42 /* GoogleSignInSwift */,
 			);
 			productName = Tilly;
 			productReference = B56BEFD271A41F6BB08E777E /* Tilly.app */;
@@ -342,6 +382,10 @@
 			name = TillyRemote;
 			packageProductDependencies = (
 				B64A66864A186E577D58E430 /* TillyCore */,
+				8C6547B00D8B83B42613C6EC /* FirebaseAuth */,
+				AC138233DC34F304AFF7022E /* FirebaseDatabase */,
+				55B44A26794936896895EE78 /* GoogleSignIn */,
+				3ED982342F0E530444BEF5E5 /* GoogleSignInSwift */,
 			);
 			productName = TillyRemote;
 			productReference = 21D2BFF89B7A7E7C9BEE38B7 /* TillyRemote.app */;
@@ -355,6 +399,8 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+				};
 			};
 			buildConfigurationList = C79505BD4A249E3D73FEF54E /* Build configuration list for PBXProject "Tilly" */;
 			developmentRegion = en;
@@ -366,6 +412,8 @@
 			mainGroup = AECEAFFE733EB4A3974055D6;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				F9894A505BF3C7DBC2DB24DC /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				E8273F6C14A3B4E357BAB179 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				8529A3A5FE5F0D85E2B1C902 /* XCLocalSwiftPackageReference "Packages/TillyCore" */,
 				BD7A64C3389BDBF962ED199E /* XCLocalSwiftPackageReference "Packages/TillyProviders" */,
 				62391EF864431076404E93DA /* XCLocalSwiftPackageReference "Packages/TillyStorage" */,
@@ -388,6 +436,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D47983A3F0BDFDB50BEF59D9 /* Assets.xcassets in Resources */,
+				425916D524D5EBD17B859F90 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -396,6 +445,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				228D0C682B4DD293DBF8751E /* Assets.xcassets in Resources */,
+				352C541AA66FEC82ABFD4B1B /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -406,11 +456,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C334173BBDB0A58AAB196B04 /* RemoteChatView.swift in Sources */,
-				5ED60A83B1FCB2F5577BB07F /* RemoteClient.swift in Sources */,
-				A6E90E7E3DCB4A169EAB202A /* RemoteConnectionView.swift in Sources */,
+				FAD6EA9F92CFE9B85DF30DE2 /* AuthService.swift in Sources */,
+				32F2EBB7E8409FC7C9E989AE /* FirebaseRelay.swift in Sources */,
 				A62C7B0C85A93C1FA7A21396 /* RemoteContentView.swift in Sources */,
-				C6D43896BFA1B26F43F5545A /* RemoteSessionListView.swift in Sources */,
+				71C0DB8586416C453E61DC1C /* RemoteMacStatusView.swift in Sources */,
+				61A93D2DBF8252EEB722A12F /* SignInView.swift in Sources */,
 				79BC565A6D6CB7EB2D448C7F /* TillyRemoteApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -421,15 +471,17 @@
 			files = (
 				93F132421C0AFC4B42812464 /* AppCommands.swift in Sources */,
 				081117EAFF7088259E542D4A /* AppState.swift in Sources */,
+				9ED5B3A300C8CFB39F05946B /* AuthService.swift in Sources */,
 				CC717D363813E811C3EA95C9 /* ChatView.swift in Sources */,
 				C9A5EA6E59400D999D4688A4 /* ContentView.swift in Sources */,
+				77162C6968EA9D5587652479 /* FirebaseRelay.swift in Sources */,
 				ED6F4EBC715D9F5721BC5E4E /* InputBarView.swift in Sources */,
 				992B4093B0D0631990EBD38E /* MemoryBrowserView.swift in Sources */,
 				18634CDFD62DBD5A4571B6DD /* MessageContentView.swift in Sources */,
 				FED2CB3442AE8B004678DCE4 /* MessageView.swift in Sources */,
-				C4872449BE50076281EE5670 /* RemoteServer.swift in Sources */,
 				50A406395CF1EDD23D21F168 /* SettingsView.swift in Sources */,
 				4397EEF8ADF15BB331027A47 /* SidebarView.swift in Sources */,
+				52F39663C346816AAE5B5E55 /* SignInView.swift in Sources */,
 				F3415953B7BEC11C7533FD5F /* SkillBrowserView.swift in Sources */,
 				947BC7FC90CE33B197B35BCA /* TillyApp.swift in Sources */,
 			);
@@ -455,6 +507,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 0.1.0;
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = com.tilly.app;
 				PRODUCT_NAME = Tilly;
 				SDKROOT = macosx;
@@ -470,7 +523,6 @@
 				CODE_SIGN_ENTITLEMENTS = TillyRemote/TillyRemote.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = YZFVX59ZM2;
 				INFOPLIST_FILE = TillyRemote/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -478,6 +530,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = com.tilly.remote;
 				PRODUCT_NAME = TillyRemote;
 				SDKROOT = iphoneos;
@@ -504,6 +557,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 0.1.0;
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = com.tilly.app;
 				PRODUCT_NAME = Tilly;
 				SDKROOT = macosx;
@@ -581,7 +635,6 @@
 				CODE_SIGN_ENTITLEMENTS = TillyRemote/TillyRemote.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = YZFVX59ZM2;
 				INFOPLIST_FILE = TillyRemote/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -589,6 +642,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = com.tilly.remote;
 				PRODUCT_NAME = TillyRemote;
 				SDKROOT = iphoneos;
@@ -704,6 +758,25 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		E8273F6C14A3B4E357BAB179 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.1.0;
+			};
+		};
+		F9894A505BF3C7DBC2DB24DC /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 10.25.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		0184A2A8C2F8F70485EEEC86 /* TillyProviders */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -713,6 +786,11 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = TillyCore;
 		};
+		3ED982342F0E530444BEF5E5 /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E8273F6C14A3B4E357BAB179 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
 		41D604BDF3CE4BE6C9C398C8 /* TillyStorage */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = TillyStorage;
@@ -721,9 +799,44 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = TillyTools;
 		};
+		55B44A26794936896895EE78 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E8273F6C14A3B4E357BAB179 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		800096BCD889E9FC5045AFC2 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E8273F6C14A3B4E357BAB179 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		8C6547B00D8B83B42613C6EC /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F9894A505BF3C7DBC2DB24DC /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		9E47E74586F91633EF678E5F /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F9894A505BF3C7DBC2DB24DC /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		AC138233DC34F304AFF7022E /* FirebaseDatabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F9894A505BF3C7DBC2DB24DC /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseDatabase;
+		};
 		B64A66864A186E577D58E430 /* TillyCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = TillyCore;
+		};
+		C2F312B01A6994FA435646AD /* FirebaseDatabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F9894A505BF3C7DBC2DB24DC /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseDatabase;
+		};
+		E19BC910B1B688CCDE11EF42 /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E8273F6C14A3B4E357BAB179 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -90,9 +90,13 @@ struct SidebarView: View {
                let defaultModel = config.defaultModel {
                 appState.selectedModelID = defaultModel
             }
+            appState.saveProviderSelection()
             Task {
                 await appState.loadModels()
             }
+        }
+        .onChange(of: appState.selectedModelID) {
+            appState.saveProviderSelection()
         }
         .task {
             await appState.loadModels()

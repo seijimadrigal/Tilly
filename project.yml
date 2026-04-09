@@ -16,6 +16,12 @@ packages:
     path: Packages/TillyStorage
   TillyTools:
     path: Packages/TillyTools
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk.git
+    from: "10.25.0"
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    from: "7.1.0"
 
 targets:
   Tilly:
@@ -29,11 +35,20 @@ targets:
     resources:
       - path: Tilly/Assets.xcassets
       - path: Tilly/Preview Content
+      - path: Tilly/GoogleService-Info.plist
     dependencies:
       - package: TillyCore
       - package: TillyProviders
       - package: TillyStorage
       - package: TillyTools
+      - package: Firebase
+        product: FirebaseAuth
+      - package: Firebase
+        product: FirebaseDatabase
+      - package: GoogleSignIn
+        product: GoogleSignIn
+      - package: GoogleSignIn
+        product: GoogleSignInSwift
     entitlements:
       path: Tilly/Tilly.entitlements
     settings:
@@ -49,6 +64,7 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         ENABLE_PREVIEWS: YES
         SWIFT_STRICT_CONCURRENCY: complete
+        OTHER_LDFLAGS: "-ObjC"
 
   TillyRemote:
     type: application
@@ -61,8 +77,17 @@ targets:
           - Info.plist
     resources:
       - path: TillyRemote/Assets.xcassets
+      - path: TillyRemote/GoogleService-Info.plist
     dependencies:
       - package: TillyCore
+      - package: Firebase
+        product: FirebaseAuth
+      - package: Firebase
+        product: FirebaseDatabase
+      - package: GoogleSignIn
+        product: GoogleSignIn
+      - package: GoogleSignIn
+        product: GoogleSignInSwift
     entitlements:
       path: TillyRemote/TillyRemote.entitlements
     info:
@@ -81,3 +106,4 @@ targets:
         SWIFT_VERSION: "6.0"
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         SWIFT_STRICT_CONCURRENCY: complete
+        OTHER_LDFLAGS: "-ObjC"

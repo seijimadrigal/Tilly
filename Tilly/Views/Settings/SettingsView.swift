@@ -14,9 +14,9 @@ struct SettingsView: View {
                     Label("Providers", systemImage: "server.rack")
                 }
 
-            RemoteSettingsView()
+            AccountSettingsView()
                 .tabItem {
-                    Label("Remote", systemImage: "iphone.and.arrow.forward")
+                    Label("Account", systemImage: "person.circle")
                 }
         }
         .frame(width: 500, height: 400)
@@ -176,39 +176,47 @@ struct ProviderDetailView: View {
     }
 }
 
-// MARK: - Remote Settings
+// MARK: - Account Settings
 
-struct RemoteSettingsView: View {
+struct AccountSettingsView: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
         Form {
-            Section("iOS Remote Control Server") {
-                HStack {
-                    Circle()
-                        .fill(appState.remoteServer.isRunning ? .green : .red)
-                        .frame(width: 10, height: 10)
-                    Text(appState.remoteServer.isRunning ? "Running" : "Stopped")
-                }
-
-                LabeledContent("Port", value: "\(appState.remoteServer.port)")
-                LabeledContent("Connected Clients", value: "\(appState.remoteServer.connectedClients)")
-
-                HStack {
-                    if appState.remoteServer.isRunning {
-                        Button("Stop Server") {
-                            appState.remoteServer.stop()
-                        }
-                    } else {
-                        Button("Start Server") {
-                            appState.remoteServer.start()
+            Section("Account") {
+                if appState.authService.isSignedIn {
+                    HStack(spacing: 12) {
+                        Image(systemName: "person.circle.fill")
+                            .font(.largeTitle)
+                            .foregroundStyle(.blue)
+                        VStack(alignment: .leading) {
+                            Text(appState.authService.userName ?? "User")
+                                .font(.headline)
+                            Text(appState.authService.userEmail ?? "")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
                     }
+
+                    Button("Sign Out", role: .destructive) {
+                        appState.authService.signOut()
+                        appState.firebaseRelay.stop()
+                    }
+                } else {
+                    Text("Not signed in")
+                        .foregroundStyle(.secondary)
                 }
             }
 
-            Section("Instructions") {
-                Text("Install Tilly Remote on your iPhone. The app will automatically discover this Mac on your local network via Bonjour.")
+            Section("Cloud Sync") {
+                HStack {
+                    Circle()
+                        .fill(appState.firebaseRelay.isConnected ? .green : .gray)
+                        .frame(width: 10, height: 10)
+                    Text(appState.firebaseRelay.isConnected ? "Connected to Firebase" : "Not connected")
+                }
+
+                Text("Your sessions and settings are synced to Firebase so you can access them from the Tilly Remote iOS app anywhere.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
