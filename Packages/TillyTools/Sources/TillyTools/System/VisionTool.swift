@@ -1,8 +1,10 @@
 import Foundation
 import TillyCore
+import Vision
+import CoreGraphics
+import ImageIO
 
-/// Analyze images — extracts text via OCR and provides image metadata.
-/// For full visual analysis, the image should be attached to the conversation.
+/// Analyze images — extracts text via macOS Vision framework OCR.
 public final class VisionTool: ToolExecutable, @unchecked Sendable {
     public init() {}
 
@@ -10,7 +12,7 @@ public final class VisionTool: ToolExecutable, @unchecked Sendable {
         ToolDefinition(
             function: ToolDefinition.FunctionDef(
                 name: "analyze_image",
-                description: "Analyze an image file — extracts text (OCR), dimensions, and metadata. Works with PNG, JPG, GIF, WEBP. Use after 'screenshot' to read text from screen captures, or analyze any image on disk. For UI screenshots, this extracts all visible text.",
+                description: "Analyze an image file — extracts all visible text (OCR) plus dimensions. Works with PNG, JPG, GIF, WEBP. Use after 'screenshot' to read text from screen captures. Returns all text found in the image.",
                 parameters: .object([
                     "type": .string("object"),
                     "properties": .object([
@@ -29,70 +31,69 @@ public final class VisionTool: ToolExecutable, @unchecked Sendable {
         let args = try JSONDecoder().decode(Args.self, from: data)
 
         let expanded = NSString(string: args.path).expandingTildeInPath
+        let fileURL = URL(fileURLWithPath: expanded)
 
         guard FileManager.default.fileExists(atPath: expanded) else {
             return ToolResult(content: "Image not found: \(args.path)", isError: true)
         }
 
-        guard let imageData = try? Data(contentsOf: URL(fileURLWithPath: expanded)) else {
+        guard let imageData = try? Data(contentsOf: fileURL) else {
             return ToolResult(content: "Failed to read image", isError: true)
         }
 
         let sizeKB = imageData.count / 1024
-        let ext = URL(fileURLWithPath: expanded).pathExtension.lowercased()
 
-        // Get image dimensions via sips
-        let dimsResult = try? await shellCommand("sips -g pixelWidth -g pixelHeight \"\(expanded)\" 2>/dev/null | grep pixel")
-        let dimensions = dimsResult?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "unknown"
+        // Load CGImage via ImageIO (the correct way)
+        guard let imageSource = CGImageSourceCreateWithURL(fileURL as CFURL, nil),
+              let cgImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) else {
+            return ToolResult(content: "Failed to decode image as CGImage. File may be corrupted or unsupported format.", isError: true)
+        }
 
-        // OCR via macOS built-in (shortcuts command or osascript with Vision)
-        // Use the simpler approach: Swift's Process + a small helper
-        let ocrText = try? await shellCommand("""
-            /usr/bin/swift -e '
-            import Vision
-            import Foundation
-            let url = URL(fileURLWithPath: "\(expanded)")
-            guard let img = CGImage.from(url) else { exit(0) }
-            let req = VNRecognizeTextRequest()
-            req.recognitionLevel = .accurate
-            let handler = VNImageRequestHandler(cgImage: img)
-            try? handler.perform([req])
-            let text = (req.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\\n")
-            print(text)
-            '
-        """)
+        let width = cgImage.width
+        let height = cgImage.height
 
-        // Fallback: use textutil or mdls for metadata
-        let mdlsResult = try? await shellCommand("mdls -name kMDItemPixelWidth -name kMDItemPixelHeight -name kMDItemContentType \"\(expanded)\" 2>/dev/null")
+        // Run OCR via Vision framework
+        let ocrText = performOCR(on: cgImage)
 
-        var result = "Image: \(URL(fileURLWithPath: expanded).lastPathComponent) (\(sizeKB)KB)\n"
-        result += "Dimensions: \(dimensions)\n"
+        var result = "Image: \(fileURL.lastPathComponent) (\(sizeKB)KB, \(width)x\(height))\n"
 
         if let question = args.question {
             result += "Looking for: \(question)\n"
         }
 
-        if let ocr = ocrText, !ocr.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            let cleaned = ocr.trimmingCharacters(in: .whitespacesAndNewlines)
-            let maxLen = 5000
+        if !ocrText.isEmpty {
+            let maxLen = 8000
             result += "\n## Text found in image (OCR):\n"
-            result += cleaned.count > maxLen ? String(cleaned.prefix(maxLen)) + "...[truncated]" : cleaned
+            result += ocrText.count > maxLen ? String(ocrText.prefix(maxLen)) + "\n...[truncated]" : ocrText
         } else {
-            result += "\n(No text detected via OCR — image may be non-textual)"
+            result += "\n(No text detected — image may be non-textual, a photo, or diagram without text)"
         }
 
         return ToolResult(content: result)
     }
 
-    private func shellCommand(_ command: String) async throws -> String {
-        let process = Process()
-        let pipe = Pipe()
-        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = ["-c", command]
-        process.standardOutput = pipe
-        process.standardError = pipe
-        try process.run()
-        process.waitUntilExit()
-        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+    /// Run VNRecognizeTextRequest on a CGImage and return all recognized text.
+    private func performOCR(on image: CGImage) -> String {
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.usesLanguageCorrection = true
+
+        let handler = VNImageRequestHandler(cgImage: image, options: [:])
+        do {
+            try handler.perform([request])
+        } catch {
+            return ""
+        }
+
+        guard let observations = request.results as? [VNRecognizedTextObservation] else {
+            return ""
+        }
+
+        // Sort top-to-bottom (Vision uses bottom-left origin, so higher Y = higher on screen)
+        let lines = observations
+            .sorted { $0.boundingBox.origin.y > $1.boundingBox.origin.y }
+            .compactMap { $0.topCandidates(1).first?.string }
+
+        return lines.joined(separator: "\n")
     }
 }
