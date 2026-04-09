@@ -6,11 +6,13 @@ import TillyTools
 import FirebaseCore
 import GoogleSignIn
 
-class AppDelegate: NSObject, NSApplicationDelegate {
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        FirebaseApp.configure()
-    }
+/// Configure Firebase at static init time — before ANY Swift code touches Auth.
+private let _firebaseConfigured: Bool = {
+    FirebaseApp.configure()
+    return true
+}()
 
+class AppDelegate: NSObject, NSApplicationDelegate {
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls {
             GIDSignIn.sharedInstance.handle(url)
@@ -21,25 +23,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct TillyApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @State private var appState: AppState?
+    @State private var appState: AppState
+
+    init() {
+        // Force Firebase to configure before AppState is created
+        _ = _firebaseConfigured
+        _appState = State(initialValue: AppState())
+    }
 
     var body: some Scene {
         WindowGroup {
             Group {
-                if let appState {
-                    if appState.authService.isSignedIn {
-                        ContentView()
-                            .environment(appState)
-                    } else {
-                        SignInView()
-                            .environment(appState)
-                    }
+                if appState.authService.isSignedIn {
+                    ContentView()
+                        .environment(appState)
                 } else {
-                    ProgressView("Loading...")
-                        .onAppear {
-                            // Firebase is configured by AppDelegate before this runs
-                            appState = AppState()
-                        }
+                    SignInView()
+                        .environment(appState)
                 }
             }
             .onOpenURL { url in
@@ -47,17 +47,13 @@ struct TillyApp: App {
             }
         }
         .commands {
-            if let appState {
-                AppCommands(appState: appState)
-            }
+            AppCommands(appState: appState)
         }
 
         #if os(macOS)
         Settings {
-            if let appState {
-                SettingsView()
-                    .environment(appState)
-            }
+            SettingsView()
+                .environment(appState)
         }
         #endif
     }

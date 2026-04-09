@@ -3,9 +3,14 @@ import TillyCore
 import FirebaseCore
 import GoogleSignIn
 
+/// Configure Firebase at static init time — before ANY Swift code touches Auth.
+private let _firebaseConfigured: Bool = {
+    FirebaseApp.configure()
+    return true
+}()
+
 class RemoteAppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        FirebaseApp.configure()
         return true
     }
 
@@ -17,35 +22,34 @@ class RemoteAppDelegate: NSObject, UIApplicationDelegate {
 @main
 struct TillyRemoteApp: App {
     @UIApplicationDelegateAdaptor(RemoteAppDelegate.self) var appDelegate
-    @State private var authService: AuthServiceIOS?
-    @State private var relay: FirebaseRelayIOS?
+    @State private var authService: AuthServiceIOS
+    @State private var relay: FirebaseRelayIOS
+
+    init() {
+        _ = _firebaseConfigured
+        _authService = State(initialValue: AuthServiceIOS())
+        _relay = State(initialValue: FirebaseRelayIOS())
+    }
 
     var body: some Scene {
         WindowGroup {
             Group {
-                if let authService, let relay {
-                    if authService.isSignedIn {
-                        RemoteContentView()
-                            .environment(authService)
-                            .environment(relay)
-                            .onAppear {
-                                if let uid = authService.userID {
-                                    relay.start(userID: uid)
-                                }
-                            }
-                    } else {
-                        SignInViewIOS()
-                            .environment(authService)
-                    }
-                } else {
-                    ProgressView("Loading...")
+                if authService.isSignedIn {
+                    RemoteContentView()
+                        .environment(authService)
+                        .environment(relay)
                         .onAppear {
-                            // Firebase is configured by AppDelegate before this runs
-                            authService = AuthServiceIOS()
-                            relay = FirebaseRelayIOS()
-                            authService?.restoreSession()
+                            if let uid = authService.userID {
+                                relay.start(userID: uid)
+                            }
                         }
+                } else {
+                    SignInViewIOS()
+                        .environment(authService)
                 }
+            }
+            .onAppear {
+                authService.restoreSession()
             }
             .onOpenURL { url in
                 GIDSignIn.sharedInstance.handle(url)

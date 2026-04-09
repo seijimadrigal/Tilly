@@ -1,5 +1,6 @@
 import SwiftUI
 import TillyCore
+import UIKit
 
 struct RemoteContentView: View {
     @Environment(AuthServiceIOS.self) private var authService
@@ -246,5 +247,83 @@ struct RemoteAskUserFirebase: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .presentationDetents([.medium, .large])
+    }
+}
+
+// MARK: - Message Row
+
+struct RemoteMessageRow: View {
+    let message: Message
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Group {
+                switch message.role {
+                case .user:
+                    Image(systemName: "person.circle.fill").foregroundStyle(.blue)
+                case .assistant:
+                    Image(systemName: "sparkle").foregroundStyle(.purple)
+                case .tool:
+                    Image(systemName: "wrench.and.screwdriver.fill").foregroundStyle(.orange)
+                case .system:
+                    Image(systemName: "gearshape.fill").foregroundStyle(.gray)
+                }
+            }
+            .font(.caption)
+            .padding(.top, 2)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(message.role == .user ? "You" : message.role == .assistant ? "Tilly" : message.role.rawValue.capitalized)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+
+                ForEach(Array(message.content.enumerated()), id: \.offset) { _, block in
+                    switch block {
+                    case .text(let text):
+                        if !text.isEmpty {
+                            Text(text)
+                                .font(.body)
+                                .textSelection(.enabled)
+                        }
+                    case .image(let data, _):
+                        if let uiImage = UIImage(data: data) {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(maxWidth: 280, maxHeight: 200)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                    case .fileReference(let file):
+                        HStack(spacing: 8) {
+                            Image(systemName: "doc.fill").foregroundStyle(.blue)
+                            VStack(alignment: .leading) {
+                                Text(file.fileName).font(.caption).fontWeight(.medium)
+                                Text(ByteCountFormatter.string(fromByteCount: file.sizeBytes, countStyle: .file))
+                                    .font(.caption2).foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(8)
+                        .background(Color(.tertiarySystemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                }
+
+                if let toolCalls = message.toolCalls, !toolCalls.isEmpty {
+                    ForEach(toolCalls) { tc in
+                        HStack(spacing: 6) {
+                            Image(systemName: "terminal").font(.caption2).foregroundStyle(.orange)
+                            Text(tc.function.name).font(.caption).fontWeight(.medium)
+                        }
+                        .padding(6)
+                        .background(Color.orange.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                }
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 6)
+        .background(message.role == .assistant ? Color(.secondarySystemBackground).opacity(0.5) : .clear)
     }
 }
