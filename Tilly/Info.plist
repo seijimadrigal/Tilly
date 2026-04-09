@@ -20,6 +20,12 @@
 	<string>1</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.developer-tools</string>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>Tilly needs screen capture access to take screenshots for visual analysis and UI automation.</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Tilly needs Apple Events access to control Safari and other applications.</string>
+	<key>NSAccessibilityUsageDescription</key>
+	<string>Tilly needs accessibility access to read window positions for screenshots and UI automation.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
