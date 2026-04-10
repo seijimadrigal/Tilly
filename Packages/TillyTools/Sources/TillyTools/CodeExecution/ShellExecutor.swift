@@ -14,7 +14,7 @@ public final class ShellExecutor: ToolExecutable, @unchecked Sendable {
         (#"\bunlink\s"#, "unlink"),
         (#"\bshred\s"#, "shred"),
         (#"\bsrm\s"#, "srm (secure remove)"),
-        (#">\s*/dev/"#, "redirect to /dev/"),
+        (#">\s*/dev/(?!null)"#, "redirect to /dev/ device"),
         (#"\bmkfs\b"#, "mkfs (format filesystem)"),
         (#"\bdiskutil\s+erase"#, "diskutil erase"),
         (#"\bdd\s+if="#, "dd (disk dump)"),

@@ -518,11 +518,27 @@ final class AppState {
                 tools: tools?.isEmpty == true ? nil : tools
             )
 
-            let result = try await streamResponse(
-                request: request,
-                provider: provider,
-                session: &session
-            )
+            let result: StreamResult
+            do {
+                result = try await streamResponse(
+                    request: request,
+                    provider: provider,
+                    session: &session
+                )
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                // LLM error (HTTP 400, rate limit, etc.) — don't kill the entire loop
+                DiagnosticLogger.shared.error("LLM error in round \(round + 1): \(error.localizedDescription)")
+
+                let errorMsg = Message(
+                    role: .assistant,
+                    content: [.text("Error communicating with the model: \(error.localizedDescription)\n\nThis can happen when the conversation is too long. Try starting a new chat.")]
+                )
+                session.appendMessage(errorMsg)
+                updateCurrentSession(session)
+                break  // Exit loop gracefully instead of crashing
+            }
 
             DiagnosticLogger.shared.llmResponse(
                 model: selectedModelID,
