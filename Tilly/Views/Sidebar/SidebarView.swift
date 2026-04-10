@@ -273,26 +273,27 @@ struct SectionRow: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 Image(systemName: section.icon)
-                    .font(.caption)
+                    .font(.body)
                     .foregroundStyle(isActive ? section.color : .secondary)
-                    .frame(width: 18)
+                    .frame(width: 22)
                 Text(section.rawValue)
-                    .font(.subheadline)
+                    .font(.headline)
                     .foregroundStyle(isActive ? .primary : .secondary)
                 Spacer()
                 Text("\(count)")
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundStyle(.tertiary)
-                    .padding(.horizontal, 5)
+                    .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(Capsule().fill(Color.gray.opacity(0.15)))
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
             .background(
-                RoundedRectangle(cornerRadius: 6)
+                RoundedRectangle(cornerRadius: 8)
                     .fill(isActive ? section.color.opacity(0.1) : .clear)
             )
         }
@@ -312,28 +313,29 @@ struct CompactRow: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.caption2)
+                    .font(.body)
                     .foregroundStyle(iconColor)
-                    .frame(width: 14)
-                VStack(alignment: .leading, spacing: 0) {
+                    .frame(width: 20)
+                VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.caption)
+                        .font(.body)
                         .lineLimit(1)
                     if let subtitle, !subtitle.isEmpty {
                         Text(subtitle)
                             .font(.caption2)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
                 }
                 Spacer()
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .contentShape(Rectangle())
             .background(
-                RoundedRectangle(cornerRadius: 4)
+                RoundedRectangle(cornerRadius: 6)
                     .fill(isSelected ? Color.accentColor.opacity(0.12) : .clear)
             )
         }
@@ -365,5 +367,6 @@ struct SessionRowView: View {
             Spacer()
         }
         .padding(.vertical, 2)
+        .contentShape(Rectangle())
     }
 }

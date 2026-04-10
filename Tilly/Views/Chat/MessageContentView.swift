@@ -282,45 +282,27 @@ struct ThinkingDropdown: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header — always visible
             Button {
                 withAnimation(.easeInOut(duration: 0.15)) { isExpanded.toggle() }
             } label: {
-                HStack(spacing: 8) {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(.purple.opacity(0.5))
-                        .frame(width: 3)
-
+                HStack(spacing: 6) {
                     Image(systemName: "brain")
-                        .font(.caption)
+                        .font(.system(size: 10))
                         .foregroundStyle(.purple)
 
                     Text("Thinking")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(.secondary)
 
-                    Spacer()
-
-                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .font(.caption2)
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.right")
+                        .font(.system(size: 9))
                         .foregroundStyle(.tertiary)
                 }
                 .padding(.horizontal, 10)
-                .padding(.vertical, 6)
+                .padding(.vertical, 5)
             }
             .buttonStyle(.plain)
 
-            // Preview — always visible, faded (2 lines max)
-            if !isExpanded {
-                Text(text)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(2)
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 6)
-            }
-
-            // Full text — shown when expanded
             if isExpanded {
                 Text(text)
                     .font(.system(size: 12))
@@ -333,9 +315,9 @@ struct ThinkingDropdown: View {
             }
         }
         .background(Color.purple.opacity(0.04))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 6)
                 .stroke(Color.purple.opacity(0.12), lineWidth: 1)
         )
     }
@@ -470,7 +452,7 @@ struct CodeBlockView: View {
 
 struct FileChipView: View {
     let file: FileAttachment
-    @State private var showPreview = false
+    @State private var showPreview = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -573,6 +555,15 @@ struct InlineFilePreview: View {
                     .frame(maxWidth: 500, maxHeight: 400)
                     .clipShape(RoundedRectangle(cornerRadius: 4))
                     .padding(8)
+            } else if isMarkdownFile {
+                // Render markdown files with rich formatting
+                ScrollView {
+                    RichTextView(text: loadTextContent())
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxHeight: 400)
+                .background(Color(.textBackgroundColor).opacity(0.3))
             } else if isTextFile {
                 ScrollView {
                     Text(loadTextContent())
@@ -597,8 +588,13 @@ struct InlineFilePreview: View {
         }
     }
 
+    private var isMarkdownFile: Bool {
+        let ext = URL(fileURLWithPath: filePath).pathExtension.lowercased()
+        return ext == "md" || ext == "markdown" || mimeType.contains("markdown")
+    }
+
     private var isTextFile: Bool {
-        let textExtensions = ["md", "txt", "swift", "py", "js", "ts", "json", "yaml", "yml",
+        let textExtensions = ["txt", "swift", "py", "js", "ts", "json", "yaml", "yml",
                               "toml", "xml", "html", "css", "sh", "bash", "zsh", "c", "cpp",
                               "h", "rs", "go", "java", "kt", "rb", "r", "sql", "csv", "log",
                               "conf", "cfg", "ini", "env", "dockerfile", "makefile"]

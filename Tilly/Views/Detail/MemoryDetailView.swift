@@ -17,10 +17,10 @@ struct MemoryDetailView: View {
                         Text(memory.name)
                             .font(.title2.bold())
                         Text(memory.type.rawValue.capitalized)
-                            .font(.caption)
+                            .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 8)
-                            .padding(.vertical, 2)
+                            .padding(.vertical, 3)
                             .background(Capsule().fill(colorForType(memory.type).opacity(0.15)))
                     }
                 }
@@ -40,7 +40,7 @@ struct MemoryDetailView: View {
                     Label("Created \(memory.created, style: .relative) ago", systemImage: "calendar")
                     Label("Updated \(memory.updated, style: .relative) ago", systemImage: "clock")
                 }
-                .font(.caption)
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
 
                 // Actions

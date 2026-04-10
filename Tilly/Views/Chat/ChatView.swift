@@ -133,9 +133,32 @@ struct MessageTurn: Identifiable {
         return ""
     }
 
+    /// All content blocks from assistant messages (thinking, text, fileReference, image)
+    /// This preserves the full content including thinking and file chips.
+    var allAssistantContentBlocks: [ContentBlock] {
+        assistantMessages.flatMap { $0.content }
+            .filter { block in
+                switch block {
+                case .text(let t): return !t.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                case .thinking(let t): return !t.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                case .image, .fileReference: return true
+                }
+            }
+    }
+
     /// All tool calls across all assistant messages in this turn
     var allToolCalls: [ToolCall] {
         assistantMessages.flatMap { $0.toolCalls ?? [] }
+    }
+
+    /// Sub-agent delegation calls only
+    var subAgentCalls: [ToolCall] {
+        allToolCalls.filter { $0.function.name == "delegate_task" }
+    }
+
+    /// Regular tool calls (excluding sub-agent delegations)
+    var regularToolCalls: [ToolCall] {
+        allToolCalls.filter { $0.function.name != "delegate_task" }
     }
 
     /// The last assistant message's metadata
@@ -143,9 +166,11 @@ struct MessageTurn: Identifiable {
         assistantMessages.last?.metadata
     }
 
-    /// Total tool operations (calls + results)
+    /// Total regular tool operations (excluding sub-agents)
     var toolOperationCount: Int {
-        allToolCalls.count + toolMessages.count
+        let subAgentIDs = Set(subAgentCalls.map(\.id))
+        let regularResults = toolMessages.filter { !subAgentIDs.contains($0.toolCallID ?? "") }
+        return regularToolCalls.count + regularResults.count
     }
 }
 
@@ -200,6 +225,7 @@ struct UserMessageView: View {
 struct AssistantTurnView: View {
     let turn: MessageTurn
     @State private var showToolDetails = false
+    @State private var showSubAgentDetails = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
@@ -214,18 +240,30 @@ struct AssistantTurnView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.purple)
 
-                // Tool operations — single collapsible block
+                // Tool operations — regular tool calls only
                 if turn.toolOperationCount > 0 {
+                    let subAgentIDs = Set(turn.subAgentCalls.map(\.id))
                     ToolOperationsBlock(
-                        toolCalls: turn.allToolCalls,
-                        toolResults: turn.toolMessages,
+                        toolCalls: turn.regularToolCalls,
+                        toolResults: turn.toolMessages.filter { !subAgentIDs.contains($0.toolCallID ?? "") },
                         isExpanded: $showToolDetails
                     )
                 }
 
-                // Final text response (the part the user actually cares about)
-                if !turn.finalAssistantText.isEmpty {
-                    MessageContentView(content: [.text(turn.finalAssistantText)])
+                // Sub-agent operations — separate collapsible block
+                if !turn.subAgentCalls.isEmpty {
+                    let subAgentIDs = Set(turn.subAgentCalls.map(\.id))
+                    SubAgentBlock(
+                        subAgentCalls: turn.subAgentCalls,
+                        toolResults: turn.toolMessages.filter { subAgentIDs.contains($0.toolCallID ?? "") },
+                        isExpanded: $showSubAgentDetails
+                    )
+                }
+
+                // Final response — renders thinking dropdowns, text, file chips, images
+                let contentBlocks = turn.allAssistantContentBlocks
+                if !contentBlocks.isEmpty {
+                    MessageContentView(content: contentBlocks)
                 }
 
                 // Metadata
@@ -329,6 +367,7 @@ struct ToolOperationsBlock: View {
         case "plan_task": return "Plan"
         case "scratchpad_write": return "Notes"
         case "ask_user": return "Ask"
+        case "delegate_task": return "Sub-Agent"
         default: return name.replacingOccurrences(of: "_", with: " ").capitalized
         }
     }
@@ -440,6 +479,7 @@ struct NestedToolCallRow: View {
         case "scratchpad_write", "scratchpad_read": return "note.text"
         case "plan_task": return "checklist"
         case "ask_user": return "questionmark.circle"
+        case "delegate_task": return "person.2"
         default: return "wrench"
         }
     }
@@ -458,6 +498,183 @@ struct NestedToolResultRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(.textBackgroundColor).opacity(0.3))
             .clipShape(RoundedRectangle(cornerRadius: 4))
+    }
+}
+
+// MARK: - Sub-Agent Operations Block
+
+struct SubAgentBlock: View {
+    let subAgentCalls: [ToolCall]
+    let toolResults: [Message]
+    @Binding var isExpanded: Bool
+
+    private var allComplete: Bool {
+        subAgentCalls.allSatisfy { tc in toolResults.contains(where: { $0.toolCallID == tc.id }) }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) { isExpanded.toggle() }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "person.2.fill")
+                        .font(.caption)
+                        .foregroundStyle(.purple)
+
+                    Text(summaryText)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.primary)
+
+                    Spacer()
+
+                    if allComplete {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.green)
+                    } else {
+                        ProgressView().controlSize(.mini)
+                    }
+
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(Array(subAgentCalls.enumerated()), id: \.element.id) { _, tc in
+                        SubAgentCallRow(
+                            toolCall: tc,
+                            result: toolResults.first(where: { $0.toolCallID == tc.id })
+                        )
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 8)
+            }
+        }
+        .background(Color.purple.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.purple.opacity(0.15), lineWidth: 1)
+        )
+    }
+
+    private var summaryText: String {
+        let roles = subAgentCalls.compactMap { extractField($0, "role") }
+        let unique = Array(Set(roles)).sorted()
+        let count = subAgentCalls.count
+        if unique.isEmpty {
+            return "\(count) sub-agent\(count == 1 ? "" : "s")"
+        }
+        return "\(count) agent\(count == 1 ? "" : "s"): \(unique.joined(separator: ", "))"
+    }
+
+    private func extractField(_ tc: ToolCall, _ field: String) -> String? {
+        guard let data = tc.function.arguments.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let value = json[field] as? String else { return nil }
+        return value
+    }
+}
+
+// MARK: - Sub-Agent Call Row
+
+struct SubAgentCallRow: View {
+    let toolCall: ToolCall
+    let result: Message?
+    @State private var showResult = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.1)) { showResult.toggle() }
+            } label: {
+                HStack(spacing: 6) {
+                    RoundedRectangle(cornerRadius: 1.5)
+                        .fill(.purple.opacity(0.5))
+                        .frame(width: 2.5, height: 16)
+
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.purple)
+
+                    Text(roleName)
+                        .font(.system(size: 11, weight: .medium))
+
+                    Text(taskPreview)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+
+                    Spacer()
+
+                    if result != nil {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.green)
+                    } else {
+                        ProgressView().controlSize(.mini)
+                    }
+
+                    Image(systemName: showResult ? "chevron.up" : "chevron.right")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.quaternary)
+                }
+                .padding(.vertical, 4)
+            }
+            .buttonStyle(.plain)
+
+            if showResult {
+                // Task description
+                if let task = extractField("task") {
+                    Text(task)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .lineSpacing(2)
+                        .padding(8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.purple.opacity(0.03))
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                }
+
+                // Result
+                if let result {
+                    let text = result.textContent
+                    Text(String(text.prefix(800)) + (text.count > 800 ? "..." : ""))
+                        .font(.system(size: 11))
+                        .foregroundStyle(.purple.opacity(0.8))
+                        .textSelection(.enabled)
+                        .lineSpacing(2)
+                        .padding(8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.purple.opacity(0.03))
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                }
+            }
+        }
+    }
+
+    private var roleName: String {
+        extractField("role") ?? "Sub-Agent"
+    }
+
+    private var taskPreview: String {
+        guard let task = extractField("task") else { return "" }
+        return String(task.prefix(50)) + (task.count > 50 ? "..." : "")
+    }
+
+    private func extractField(_ field: String) -> String? {
+        guard let data = toolCall.function.arguments.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let value = json[field] as? String else { return nil }
+        return value
     }
 }
 

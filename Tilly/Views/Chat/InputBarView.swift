@@ -11,61 +11,34 @@ struct InputBarView: View {
     @FocusState private var isInputFocused: Bool
 
     var body: some View {
-        VStack(spacing: 6) {
-            // Attachment previews
-            if !attachments.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(attachments) { attachment in
-                            AttachmentChip(attachment: attachment) {
-                                attachments.removeAll { $0.id == attachment.id }
+        VStack(spacing: 0) {
+            // Main input container — large rounded card
+            VStack(spacing: 0) {
+                // Attachment previews (inside the card)
+                if !attachments.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(attachments) { attachment in
+                                AttachmentChip(attachment: attachment) {
+                                    attachments.removeAll { $0.id == attachment.id }
+                                }
                             }
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
                     }
-                    .padding(.horizontal, 16)
                 }
-                .frame(height: 60)
-            }
 
-            HStack(alignment: .bottom, spacing: 8) {
-                // Attach button
-                Menu {
-                    Button {
-                        showFilePicker = true
-                    } label: {
-                        Label("Attach File", systemImage: "doc")
-                    }
-
-                    Button {
-                        showImagePicker = true
-                    } label: {
-                        Label("Attach Image", systemImage: "photo")
-                    }
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.gray)
-                }
-                .menuStyle(.borderlessButton)
-                .frame(width: 30)
-
-                // Text input
+                // Text editor
                 TextEditor(text: $inputText)
                     .font(.body)
                     .focused($isInputFocused)
-                    .frame(minHeight: 36, maxHeight: 120)
+                    .frame(minHeight: 60, maxHeight: 180)
                     .fixedSize(horizontal: false, vertical: true)
                     .scrollContentBackground(.hidden)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color(.textBackgroundColor))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                    )
+                    .padding(.horizontal, 16)
+                    .padding(.top, attachments.isEmpty ? 14 : 8)
+                    .padding(.bottom, 4)
                     .onKeyPress(.return, phases: .down) { press in
                         if press.modifiers.contains(.shift) {
                             return .ignored
@@ -80,40 +53,69 @@ struct InputBarView: View {
                         return true
                     }
 
-                // Send / Stop button
-                if appState.isStreaming {
-                    Button {
-                        appState.stopStreaming()
-                    } label: {
-                        Image(systemName: "stop.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(.red)
+                // Bottom toolbar row
+                HStack(spacing: 6) {
+                    // Attach file
+                    Button { showFilePicker = true } label: {
+                        Image(systemName: AppIcons.attach)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
-                    .help("Stop generation")
-                } else {
-                    Button {
-                        send()
-                    } label: {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(Color.accentColor)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && attachments.isEmpty)
-                    .help("Send message")
-                }
-            }
+                    .help("Attach file")
 
-            Text("Enter to send · Shift+Enter new line · Drop files to attach")
-                .font(.caption2)
-                .foregroundStyle(.quaternary)
+                    // Attach image
+                    Button { showImagePicker = true } label: {
+                        Image(systemName: AppIcons.attachImage)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Attach image")
+
+                    // Mode selector
+                    ModeSelectorView()
+
+                    Spacer()
+
+                    // Send / Stop button
+                    if appState.isStreaming {
+                        Button {
+                            appState.stopStreaming()
+                        } label: {
+                            Image(systemName: AppIcons.stop)
+                                .font(.title2)
+                                .foregroundStyle(.red)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Stop generation")
+                    } else {
+                        Button {
+                            send()
+                        } label: {
+                            Image(systemName: AppIcons.send)
+                                .font(.title2)
+                                .foregroundStyle(canSend ? Color.accentColor : Color.gray.opacity(0.4))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(!canSend)
+                        .help("Send message")
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.bottom, 10)
+            }
+            .background(Color(.controlBackgroundColor))
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.04), radius: 8, y: 2)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .onAppear {
-            isInputFocused = true
-        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .onAppear { isInputFocused = true }
         .fileImporter(
             isPresented: $showFilePicker,
             allowedContentTypes: [.item],
@@ -128,6 +130,10 @@ struct InputBarView: View {
         ) { result in
             handleFileImport(result)
         }
+    }
+
+    private var canSend: Bool {
+        !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !attachments.isEmpty
     }
 
     private func send() {
@@ -296,11 +302,59 @@ struct AttachmentChip: View {
             .buttonStyle(.plain)
         }
         .padding(6)
-        .background(Color(.controlBackgroundColor))
+        .background(Color(.controlBackgroundColor).opacity(0.8))
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(
             RoundedRectangle(cornerRadius: 8)
                 .stroke(Color.gray.opacity(0.2), lineWidth: 1)
         )
+    }
+}
+
+// MARK: - Mode Selector
+
+struct ModeSelectorView: View {
+    @Environment(AppState.self) private var appState
+    @State private var showMenu = false
+
+    var body: some View {
+        Menu {
+            ForEach(AppState.ChatMode.allCases, id: \.self) { mode in
+                Button {
+                    appState.chatMode = mode
+                } label: {
+                    HStack {
+                        Image(systemName: mode.icon)
+                        Text(mode.rawValue)
+                        if appState.chatMode == mode {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: appState.chatMode.icon)
+                    .font(.system(size: 11))
+                Text(appState.chatMode.shortLabel)
+                    .font(.caption.weight(.medium))
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 8))
+            }
+            .foregroundStyle(appState.chatMode == .normal ? .secondary : appState.chatMode.color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                Capsule()
+                    .fill(appState.chatMode == .normal ? Color.gray.opacity(0.1) : appState.chatMode.color.opacity(0.12))
+            )
+            .overlay(
+                Capsule()
+                    .stroke(appState.chatMode == .normal ? Color.clear : appState.chatMode.color.opacity(0.25), lineWidth: 1)
+            )
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help("Chat mode: \(appState.chatMode.rawValue)")
     }
 }

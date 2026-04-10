@@ -4,6 +4,16 @@ import TillyCore
 struct ContentView: View {
     @Environment(AppState.self) private var appState
     @State private var showDiagnosticLog = false
+    @AppStorage("textSizeLevel") private var textSizeLevel = 3
+
+    private static let sizeSteps: [DynamicTypeSize] = [
+        .xSmall, .small, .medium, .large, .xLarge, .xxLarge, .xxxLarge
+    ]
+
+    private var dynamicSize: DynamicTypeSize {
+        let clamped = min(max(textSizeLevel, 0), Self.sizeSteps.count - 1)
+        return Self.sizeSteps[clamped]
+    }
 
     var body: some View {
         NavigationSplitView {
@@ -31,6 +41,7 @@ struct ContentView: View {
                     .environment(appState)
             }
         }
+        .dynamicTypeSize(dynamicSize)
         .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 400)
         .frame(minWidth: 800, minHeight: 500)
         .sheet(isPresented: Binding(
@@ -53,6 +64,7 @@ struct ContentView: View {
                 showDiagnosticLog = DiagnosticLogger.shared.showLogViewer
             }
         }
+        // Cmd+/- text scaling is handled via AppCommands (View menu)
     }
 }
 

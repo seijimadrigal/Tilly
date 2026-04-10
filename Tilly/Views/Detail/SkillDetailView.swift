@@ -25,9 +25,9 @@ struct SkillDetailView: View {
                 if !skill.trigger.isEmpty {
                     HStack {
                         Text("Triggers:")
-                            .font(.caption.weight(.medium))
+                            .font(.subheadline.weight(.medium))
                         Text(skill.trigger)
-                            .font(.caption)
+                            .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -37,21 +37,21 @@ struct SkillDetailView: View {
                     Divider()
                     HStack(spacing: 24) {
                         if !skill.inputs.isEmpty {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Inputs").font(.caption.weight(.semibold))
-                                ForEach(skill.inputs, id: \.self) { Text("• \($0)").font(.caption).foregroundStyle(.secondary) }
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Inputs").font(.subheadline.weight(.semibold))
+                                ForEach(skill.inputs, id: \.self) { Text("• \($0)").font(.subheadline).foregroundStyle(.secondary) }
                             }
                         }
                         if !skill.outputs.isEmpty {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Outputs").font(.caption.weight(.semibold))
-                                ForEach(skill.outputs, id: \.self) { Text("• \($0)").font(.caption).foregroundStyle(.secondary) }
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Outputs").font(.subheadline.weight(.semibold))
+                                ForEach(skill.outputs, id: \.self) { Text("• \($0)").font(.subheadline).foregroundStyle(.secondary) }
                             }
                         }
                         if !skill.dependencies.isEmpty {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Dependencies").font(.caption.weight(.semibold))
-                                ForEach(skill.dependencies, id: \.self) { Text("• \($0)").font(.caption).foregroundStyle(.secondary) }
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Dependencies").font(.subheadline.weight(.semibold))
+                                ForEach(skill.dependencies, id: \.self) { Text("• \($0)").font(.subheadline).foregroundStyle(.secondary) }
                             }
                         }
                     }
@@ -75,10 +75,10 @@ struct SkillDetailView: View {
                     ForEach(Array(skill.tests.enumerated()), id: \.offset) { _, test in
                         HStack(spacing: 6) {
                             Image(systemName: test.check == "credential" ? "key" : test.check == "api" ? "globe" : "terminal")
-                                .font(.caption)
+                                .font(.subheadline)
                                 .foregroundStyle(.secondary)
                             Text("\(test.check): \(test.name ?? test.url ?? test.command ?? "")")
-                                .font(.caption)
+                                .font(.subheadline)
                         }
                     }
                 }
@@ -100,7 +100,7 @@ struct SkillDetailView: View {
                 }
 
                 Text("Created \(skill.created, style: .relative) ago")
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundStyle(.tertiary)
             }
             .padding(24)

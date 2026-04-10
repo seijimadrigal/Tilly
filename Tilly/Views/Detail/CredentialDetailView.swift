@@ -16,7 +16,7 @@ struct CredentialDetailView: View {
                         Text(credential.label)
                             .font(.title2.bold())
                         Text("Stored in macOS Keychain")
-                            .font(.caption)
+                            .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -56,7 +56,7 @@ struct CredentialDetailView: View {
                 }
 
                 Text("Password access requires your approval via the ask_user dialog.")
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundStyle(.tertiary)
             }
             .padding(24)

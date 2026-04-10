@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AppCommands: Commands {
     let appState: AppState
+    @AppStorage("textSizeLevel") private var textSizeLevel = 3
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
@@ -17,6 +18,23 @@ struct AppCommands: Commands {
             }
             .keyboardShortcut(".", modifiers: .command)
             .disabled(!appState.isStreaming)
+        }
+
+        CommandMenu("View") {
+            Button("Increase Text Size") {
+                if textSizeLevel < 6 { textSizeLevel += 1 }
+            }
+            .keyboardShortcut("+", modifiers: .command)
+
+            Button("Decrease Text Size") {
+                if textSizeLevel > 0 { textSizeLevel -= 1 }
+            }
+            .keyboardShortcut("-", modifiers: .command)
+
+            Button("Reset Text Size") {
+                textSizeLevel = 3
+            }
+            .keyboardShortcut("0", modifiers: .command)
         }
 
         CommandMenu("Debug") {

@@ -23,6 +23,38 @@ final class AppState {
     var availableModels: [ModelInfo] = []
     var isLoadingModels: Bool = false
 
+    // MARK: - Chat Modes
+    enum ChatMode: String, CaseIterable {
+        case normal = "Normal"
+        case deepResearch = "Deep Research"
+        case plan = "Plan"
+
+        var icon: String {
+            switch self {
+            case .normal: return AppIcons.modeNormal
+            case .deepResearch: return AppIcons.modeDeepResearch
+            case .plan: return AppIcons.modePlan
+            }
+        }
+
+        var color: Color {
+            switch self {
+            case .normal: return .blue
+            case .deepResearch: return .orange
+            case .plan: return .green
+            }
+        }
+
+        var shortLabel: String {
+            switch self {
+            case .normal: return "Normal"
+            case .deepResearch: return "Research"
+            case .plan: return "Plan"
+            }
+        }
+    }
+    var chatMode: ChatMode = .normal
+
     // MARK: - Detail Panel Routing
     enum DetailViewTarget: Equatable {
         case chat
@@ -558,16 +590,17 @@ final class AppState {
 
             let result: StreamResult
             do {
-                result = try await streamResponse(
+                result = try await streamResponseWithRetry(
                     request: request,
                     provider: provider,
-                    session: &session
+                    session: &session,
+                    round: round + 1
                 )
             } catch is CancellationError {
                 throw CancellationError()
             } catch {
-                // LLM error (HTTP 400, rate limit, etc.) — don't kill the entire loop
-                DiagnosticLogger.shared.error("LLM error in round \(round + 1): \(error.localizedDescription)")
+                // Permanent LLM error after retries — exit loop gracefully
+                DiagnosticLogger.shared.error("LLM error in round \(round + 1) (after retries): \(error.localizedDescription)")
 
                 let errorMsg = Message(
                     role: .assistant,
@@ -575,7 +608,7 @@ final class AppState {
                 )
                 session.appendMessage(errorMsg)
                 updateCurrentSession(session)
-                break  // Exit loop gracefully instead of crashing
+                break
             }
 
             DiagnosticLogger.shared.llmResponse(
@@ -694,7 +727,7 @@ final class AppState {
               session.messages[lastIdx].role == .assistant else { return }
 
         let fullText = session.messages[lastIdx].textContent
-        guard fullText.count > 800 else { return }
+        guard fullText.count > 2000 else { return }
 
         // Extract thinking content if present
         let thinkingBlocks = session.messages[lastIdx].content.compactMap { block -> String? in
@@ -813,6 +846,40 @@ final class AppState {
     }
 
     /// Stream a single completion and return accumulated tool calls (if any).
+    /// Retry transient LLM errors (5xx, timeouts) up to 3 times with exponential backoff.
+    private func streamResponseWithRetry(
+        request: ChatCompletionRequest,
+        provider: any LLMProvider,
+        session: inout Session,
+        round: Int,
+        maxRetries: Int = 3
+    ) async throws -> StreamResult {
+        var lastError: Error?
+        for attempt in 0..<maxRetries {
+            if !isStreaming { throw CancellationError() }
+            do {
+                return try await streamResponse(request: request, provider: provider, session: &session)
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                lastError = error
+                let desc = error.localizedDescription
+                let isTransient = desc.contains("500") || desc.contains("502") || desc.contains("503")
+                    || desc.contains("429") || desc.contains("timeout") || desc.contains("Timeout")
+                    || desc.contains("overloaded") || desc.contains("Unknown error")
+
+                if isTransient && attempt < maxRetries - 1 {
+                    let delay = Double(1 << attempt)  // 1s, 2s, 4s
+                    DiagnosticLogger.shared.log(.system, "LLM error in round \(round) (attempt \(attempt + 1)/\(maxRetries)): \(desc) — retrying in \(Int(delay))s")
+                    try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                    continue
+                }
+                throw error
+            }
+        }
+        throw lastError ?? TillyError.encodingError("Retry exhausted")
+    }
+
     private func streamResponse(
         request: ChatCompletionRequest,
         provider: any LLMProvider,
@@ -1172,8 +1239,13 @@ final class AppState {
 
         let scratchpad = String(scratchpadService.read().prefix(800))
 
+        let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
+        let userName = NSUserName()
+
         return """
         You are Tilly, an AI agent on macOS with full computer access via tools. Respond naturally — NEVER narrate your thinking.
+
+        **System info**: User "\(userName)", home directory: \(homeDir). ALWAYS use this path for Desktop, Documents, etc. — NEVER guess the username.
 
         You have \(toolRegistry.definitions.count) tools (see tool definitions). Key ones: execute_command, read/write/edit_file, web_search, web_fetch, http_request, git, browser, screenshot, clipboard, memory_store/search, skill_run/chain/test/plan, delegate_task, ask_user, scratchpad_write/read, plan_task.
 
@@ -1198,6 +1270,41 @@ final class AppState {
         5. For content over 200 words, ALWAYS save to a file instead of writing inline.
 
         **Rules**: Plan before 3+ tool calls. Be proactive. Use scratchpad. Save memories. Ask when unsure. Read before editing. No destructive commands without confirmation. After multi-step tasks, save reusable workflows as skills.
+
+        \(modeInstructions)
         """
+    }
+
+    private var modeInstructions: String {
+        switch chatMode {
+        case .normal:
+            return ""
+        case .deepResearch:
+            return """
+            **MODE: DEEP RESEARCH**
+            You are in deep research mode. You MUST:
+            1. Use web_search extensively — search multiple queries from different angles.
+            2. Use web_fetch to read full articles, documentation, and source material.
+            3. Cross-reference findings across multiple sources before synthesizing.
+            4. Use delegate_task to spawn sub-agents for parallel research when investigating multiple topics.
+            5. Save intermediate findings to scratchpad as you go.
+            6. Be thorough — explore at least 5-10 sources before writing a conclusion.
+            7. Produce a comprehensive, well-cited report saved as a file.
+            8. Do NOT give quick surface-level answers. Go deep. Take many rounds if needed.
+            """
+        case .plan:
+            return """
+            **MODE: PLAN**
+            You are in planning mode. You MUST:
+            1. Start by using plan_task to create a structured step-by-step plan BEFORE taking any action.
+            2. Break complex goals into clear, ordered steps with dependencies.
+            3. Identify what information you need and what tools each step requires.
+            4. Use scratchpad to maintain the evolving plan and check off completed steps.
+            5. For each step, explain the reasoning and expected outcome before executing.
+            6. Use delegate_task to assign independent sub-tasks to sub-agents when steps can run in parallel.
+            7. After completing all steps, write a summary of what was accomplished and any remaining follow-ups.
+            8. Do NOT rush to execution. Plan first, confirm the plan, then execute methodically.
+            """
+        }
     }
 }

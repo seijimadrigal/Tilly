@@ -13,6 +13,7 @@
 		14F89FE83D1C7503A8B0E372 /* CredentialDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AE0E9B67DDA2A3814F64F33 /* CredentialDetailView.swift */; };
 		18634CDFD62DBD5A4571B6DD /* MessageContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2AE45D10BB1F0066765B9A6 /* MessageContentView.swift */; };
 		228D0C682B4DD293DBF8751E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EFCDF4FAD0857382E309F2E1 /* Assets.xcassets */; };
+		245B9D0F66D4FCC2003268B4 /* AppIcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1042D47E51EDB9641601671 /* AppIcons.swift */; };
 		2B47E44C85F561AEFE05F6D8 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = AC138233DC34F304AFF7022E /* FirebaseDatabase */; };
 		32F2EBB7E8409FC7C9E989AE /* FirebaseRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60CA60FD3AA2EF8AD6FC963A /* FirebaseRelay.swift */; };
 		352C541AA66FEC82ABFD4B1B /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = C73A81C3E2D23BD40FC10966 /* GoogleService-Info.plist */; };
@@ -75,6 +76,7 @@
 		8D7DB2AB7E6C97C4B5FBF5DE /* MessageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageView.swift; sourceTree = "<group>"; };
 		997A8B9E2CE32343B11A6DCB /* TillyRemote.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TillyRemote.entitlements; sourceTree = "<group>"; };
 		9A2D5E48C00DA600676E68B5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A1042D47E51EDB9641601671 /* AppIcons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIcons.swift; sourceTree = "<group>"; };
 		AA0391F5766AB5078D5BC063 /* AppCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCommands.swift; sourceTree = "<group>"; };
 		AA200997105B0DA4161B7947 /* TillyStorage */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TillyStorage; path = Packages/TillyStorage; sourceTree = SOURCE_ROOT; };
 		AB91B2CD9A2BF1D6165028B0 /* TillyTools */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TillyTools; path = Packages/TillyTools; sourceTree = SOURCE_ROOT; };
@@ -215,6 +217,14 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		5C879D347C8F65749BC56AB9 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				A1042D47E51EDB9641601671 /* AppIcons.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
 		66EBD13FA996530F16905E10 /* Session */ = {
 			isa = PBXGroup;
 			children = (
@@ -320,6 +330,7 @@
 				FBB2E0F205EAEE9AB8A90060 /* Models */,
 				211C45E3B8CF87AE7B5F19EC /* Preview Content */,
 				E916DB19570033D41FDC4870 /* Services */,
+				5C879D347C8F65749BC56AB9 /* Theme */,
 				53DBE898B99A5040CDD57B4F /* Views */,
 				71DA0E94FACD996ED7607F9C /* Assets.xcassets */,
 				D6DBE6A558498254AABC3C73 /* GoogleService-Info.plist */,
@@ -509,6 +520,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				93F132421C0AFC4B42812464 /* AppCommands.swift in Sources */,
+				245B9D0F66D4FCC2003268B4 /* AppIcons.swift in Sources */,
 				081117EAFF7088259E542D4A /* AppState.swift in Sources */,
 				9ED5B3A300C8CFB39F05946B /* AuthService.swift in Sources */,
 				CC717D363813E811C3EA95C9 /* ChatView.swift in Sources */,

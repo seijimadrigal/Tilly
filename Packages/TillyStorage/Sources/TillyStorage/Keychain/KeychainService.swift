@@ -61,6 +61,10 @@ public final class KeychainService: KeychainReadable, @unchecked Sendable {
             return key
         case errSecItemNotFound:
             return nil
+        case errSecAuthFailed:
+            // App was re-signed or keychain ACL doesn't match — delete stale entry so user can re-enter
+            try? deleteAPIKey(for: provider)
+            return nil
         default:
             throw TillyError.encodingError("Keychain read failed: \(status)")
         }
