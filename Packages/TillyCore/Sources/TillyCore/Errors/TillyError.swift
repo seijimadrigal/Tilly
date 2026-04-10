@@ -20,6 +20,10 @@ public enum TillyError: Error, LocalizedError, Sendable {
     case memoryNotFound(String)
     case skillNotFound(String)
     case invalidMemoryType(String)
+    case skillChainFailed(String)
+    case skillTestFailed(String)
+    case skillCyclicDependency(String)
+    case skillMissingInput(String)
 
     public var errorDescription: String? {
         switch self {
@@ -64,6 +68,14 @@ public enum TillyError: Error, LocalizedError, Sendable {
             return "Skill not found: \(name)"
         case .invalidMemoryType(let type):
             return "Invalid memory type: \(type). Use: user, feedback, project, reference"
+        case .skillChainFailed(let detail):
+            return "Skill chain failed: \(detail)"
+        case .skillTestFailed(let detail):
+            return "Skill test failed: \(detail)"
+        case .skillCyclicDependency(let detail):
+            return "Cyclic dependency in skill chain: \(detail)"
+        case .skillMissingInput(let detail):
+            return "Missing skill input: \(detail)"
         }
     }
 

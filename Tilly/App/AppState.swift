@@ -64,6 +64,8 @@ final class AppState {
         setupAskUserHandler()
         setupDelegateTaskHandler()
         setupKeychainHandler()
+        setupSkillChainHandler()
+        setupSkillPlanHandler()
         setupFirebaseRelay()
         initializeProviders()
         loadSessions()
@@ -122,6 +124,109 @@ final class AppState {
         toolRegistry.keychainPasswordTool?.approvalHandler = { [weak self] question, options in
             guard let self else { return "Denied" }
             return await self.showAskUserPopup(question: question, options: options)
+        }
+    }
+
+    private func setupSkillChainHandler() {
+        toolRegistry.skillChainTool?.runSkillHandler = { [weak self] skillName, context in
+            guard let self else { return "Chain unavailable" }
+            return await self.runSkillInChain(skillName: skillName, context: context)
+        }
+    }
+
+    private func runSkillInChain(skillName: String, context: String) async -> String {
+        guard let provider = currentProvider else { return "No provider" }
+
+        let skill: SkillEntry
+        do {
+            skill = try skillService.load(name: skillName)
+        } catch {
+            return "Skill not found: \(skillName)"
+        }
+
+        let taskPrompt = """
+        Execute the following skill with the given context.
+
+        ## Skill: \(skill.name)
+        \(skill.instructions)
+
+        ## Context
+        \(context)
+
+        Complete the skill's instructions using the available tools and return a clear result.
+        """
+
+        let subTools: [any ToolExecutable] = [
+            ShellExecutor(), FileReadTool(), FileWriteTool(), FileEditTool(),
+            DirectoryListTool(), WebFetchTool(), WebSearchTool(), HttpApiTool(),
+            ScratchpadWriteTool(service: scratchpadService), ScratchpadReadTool(service: scratchpadService),
+        ]
+
+        let runner = SubAgentRunner(
+            provider: provider,
+            model: selectedModelID,
+            tools: subTools,
+            maxRounds: 15,
+            systemPrompt: "You are a focused skill executor. Follow the skill instructions precisely and return a clear result. No meta-commentary."
+        )
+
+        do {
+            return try await runner.run(task: taskPrompt)
+        } catch {
+            return "Skill execution error: \(error.localizedDescription)"
+        }
+    }
+
+    private func setupSkillPlanHandler() {
+        toolRegistry.skillPlanTool?.planHandler = { [weak self] task, catalog in
+            guard let self else { return "Planning unavailable" }
+            return await self.runSkillPlanner(task: task, catalog: catalog)
+        }
+    }
+
+    private func runSkillPlanner(task: String, catalog: String) async -> String {
+        guard let provider = currentProvider else { return "No provider" }
+
+        let plannerPrompt = """
+        You are a skill planning specialist for the Tilly AI agent. Given a task and a catalog of available skills, recommend the optimal chain of skills to accomplish the task.
+
+        For each recommended skill, explain:
+        1. Why this skill is needed for this step
+        2. What inputs it needs and where they come from
+        3. What outputs it produces for downstream skills
+
+        Also identify:
+        - Missing prerequisites (credentials, API keys, missing tools)
+        - Gaps where no existing skill covers a needed step
+        - Alternative approaches if the primary chain might fail
+
+        Format your response as:
+        ## Recommended Chain
+        1. **Skill Name** (id) — reason
+           Inputs: ... → Outputs: ...
+
+        ## Prerequisites
+        - List any credentials or setup needed
+
+        ## Gaps
+        - Steps where no skill exists
+
+        ## Reasoning
+        Brief explanation of why this chain is optimal.
+        """
+
+        let runner = SubAgentRunner(
+            provider: provider,
+            model: selectedModelID,
+            tools: [],  // Pure reasoning, no tools needed
+            maxRounds: 1,
+            systemPrompt: plannerPrompt
+        )
+
+        do {
+            return try await runner.run(task: "Task: \(task)\n\n\(catalog)")
+        } catch {
+            return "Planning error: \(error.localizedDescription)"
         }
     }
 
@@ -848,7 +953,14 @@ final class AppState {
         \(memoryIndex)
 
         ## Skill Library
-        - **skill_create** / **skill_run** / **skill_list** / **skill_delete**
+        - **skill_create/run/list/delete** — manage individual skills
+        - **skill_chain** — run skills in sequence with data passing between steps
+        - **skill_test** — validate prerequisites (credentials in Keychain + memory, APIs, commands)
+        - **skill_plan** — auto-recommend the best skill chain for a task
+
+        When creating skills that need API keys: store in Keychain via `keychain save`, add `## Tests` section with `check: credential`, run `skill_test` before chaining.
+
+        Skills can declare: `inputs` (what they need), `outputs` (what they produce), `dependencies` (what must run first).
 
         ### Available Skills
         \(skillIndex)

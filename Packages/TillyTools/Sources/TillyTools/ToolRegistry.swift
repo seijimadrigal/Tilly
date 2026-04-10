@@ -14,6 +14,10 @@ public final class ToolRegistry: @unchecked Sendable {
     /// The keychain tool instance, exposed so AppState can set its approval handler.
     public private(set) var keychainPasswordTool: KeychainPasswordTool?
 
+    /// Skill chain + plan tools, exposed so AppState can set handlers.
+    public private(set) var skillChainTool: SkillChainTool?
+    public private(set) var skillPlanTool: SkillPlanTool?
+
     public init() {}
 
     public func register(_ tool: any ToolExecutable) {
@@ -66,6 +70,17 @@ public final class ToolRegistry: @unchecked Sendable {
         registry.register(SkillListTool(service: skillService))
         registry.register(SkillRunTool(service: skillService))
         registry.register(SkillDeleteTool(service: skillService))
+
+        // Skill chaining, testing, planning
+        let skillChain = SkillChainTool(skillService: skillService, scratchpadService: scratchpadService)
+        registry.register(skillChain)
+        registry.skillChainTool = skillChain
+
+        registry.register(SkillTestTool(skillService: skillService, memoryService: memoryService))
+
+        let skillPlan = SkillPlanTool(skillService: skillService)
+        registry.register(skillPlan)
+        registry.skillPlanTool = skillPlan
 
         // Scratchpad / planning tools
         registry.register(ScratchpadWriteTool(service: scratchpadService))

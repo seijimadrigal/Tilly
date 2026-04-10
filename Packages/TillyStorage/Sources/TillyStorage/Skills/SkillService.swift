@@ -23,13 +23,15 @@ public final class SkillService: @unchecked Sendable {
         name: String,
         description: String,
         trigger: String,
-        instructions: String
+        instructions: String,
+        dependencies: [String] = [],
+        inputs: [String] = [],
+        outputs: [String] = []
     ) throws -> SkillEntry {
         let slug = slugify(name)
         let skillDir = skillsDirectory.appendingPathComponent(slug)
         let skillFile = skillDir.appendingPathComponent("SKILL.md")
 
-        // Create skill directory
         try FileManager.default.createDirectory(at: skillDir, withIntermediateDirectories: true)
 
         let entry = SkillEntry(
@@ -37,7 +39,10 @@ public final class SkillService: @unchecked Sendable {
             name: name,
             description: description,
             trigger: trigger,
-            instructions: instructions
+            instructions: instructions,
+            dependencies: dependencies,
+            inputs: inputs,
+            outputs: outputs
         )
 
         let content = serializeEntry(entry)
@@ -136,28 +141,109 @@ public final class SkillService: @unchecked Sendable {
             }
         }
 
+        // Split body into instructions and tests section
+        let (instructions, tests) = parseBodySections(body)
+
         return SkillEntry(
             id: slug,
             name: meta["name"] ?? slug,
             description: meta["description"] ?? "",
             trigger: meta["trigger"] ?? "",
-            instructions: body,
-            created: parseDate(meta["created"]) ?? Date()
+            instructions: instructions,
+            created: parseDate(meta["created"]) ?? Date(),
+            dependencies: parseCSV(meta["dependencies"]),
+            inputs: parseCSV(meta["inputs"]),
+            outputs: parseCSV(meta["outputs"]),
+            tests: tests
         )
     }
 
     private func serializeEntry(_ entry: SkillEntry) -> String {
         let formatter = ISO8601DateFormatter()
-        return """
-        ---
-        name: \(entry.name)
-        description: \(entry.description)
-        trigger: \(entry.trigger)
-        created: \(formatter.string(from: entry.created))
-        ---
+        var fm = "---\n"
+        fm += "name: \(entry.name)\n"
+        fm += "description: \(entry.description)\n"
+        fm += "trigger: \(entry.trigger)\n"
+        fm += "created: \(formatter.string(from: entry.created))\n"
+        if !entry.dependencies.isEmpty { fm += "dependencies: \(entry.dependencies.joined(separator: ", "))\n" }
+        if !entry.inputs.isEmpty { fm += "inputs: \(entry.inputs.joined(separator: ", "))\n" }
+        if !entry.outputs.isEmpty { fm += "outputs: \(entry.outputs.joined(separator: ", "))\n" }
+        fm += "---\n\n"
+        fm += entry.instructions
 
-        \(entry.instructions)
-        """
+        if !entry.tests.isEmpty {
+            fm += "\n\n## Tests\n"
+            for test in entry.tests {
+                fm += "- check: \(test.check)\n"
+                if let name = test.name { fm += "  name: \(name)\n" }
+                if let source = test.source { fm += "  source: \(source)\n" }
+                if let url = test.url { fm += "  url: \(url)\n" }
+                if let method = test.method { fm += "  method: \(method)\n" }
+                if let status = test.expectStatus { fm += "  expect_status: \(status)\n" }
+                if let cmd = test.command { fm += "  command: \(cmd)\n" }
+                if let contains = test.expectContains { fm += "  expect_contains: \(contains)\n" }
+            }
+        }
+
+        return fm
+    }
+
+    // MARK: - CSV + Test Parsing Helpers
+
+    private func parseCSV(_ value: String?) -> [String] {
+        guard let value, !value.isEmpty else { return [] }
+        return value.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+    }
+
+    private func parseBodySections(_ body: String) -> (instructions: String, tests: [SkillCheck]) {
+        guard let testRange = body.range(of: "## Tests") else {
+            return (body, [])
+        }
+
+        let instructions = String(body[body.startIndex..<testRange.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+        let testSection = String(body[testRange.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return (instructions, parseTests(testSection))
+    }
+
+    private func parseTests(_ section: String) -> [SkillCheck] {
+        var checks: [SkillCheck] = []
+        var currentProps: [String: String] = [:]
+
+        for line in section.components(separatedBy: .newlines) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("- check:") {
+                // Save previous check if exists
+                if currentProps["check"] != nil {
+                    checks.append(buildCheck(from: currentProps))
+                }
+                currentProps = ["check": String(trimmed.dropFirst("- check:".count)).trimmingCharacters(in: .whitespaces)]
+            } else if trimmed.contains(":") && !currentProps.isEmpty {
+                let parts = trimmed.split(separator: ":", maxSplits: 1)
+                if parts.count == 2 {
+                    currentProps[parts[0].trimmingCharacters(in: .whitespaces)] = parts[1].trimmingCharacters(in: .whitespaces)
+                }
+            }
+        }
+        // Don't forget the last check
+        if !currentProps.isEmpty {
+            checks.append(buildCheck(from: currentProps))
+        }
+
+        return checks
+    }
+
+    private func buildCheck(from props: [String: String]) -> SkillCheck {
+        SkillCheck(
+            check: props["check"] ?? "unknown",
+            name: props["name"],
+            source: props["source"],
+            url: props["url"],
+            method: props["method"],
+            expectStatus: props["expect_status"].flatMap(Int.init),
+            command: props["command"],
+            expectContains: props["expect_contains"]
+        )
     }
 
     // MARK: - Helpers
