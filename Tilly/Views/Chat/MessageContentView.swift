@@ -200,10 +200,11 @@ struct CodeBlockView: View {
     }
 }
 
-// MARK: - File Chip View
+// MARK: - File Chip View (clickable — opens file or shows preview)
 
 struct FileChipView: View {
     let file: FileAttachment
+    @State private var showPreview = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -222,6 +223,33 @@ struct FileChipView: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
+
+            Spacer()
+
+            // Action buttons
+            HStack(spacing: 4) {
+                if FileManager.default.fileExists(atPath: file.filePath) {
+                    Button {
+                        NSWorkspace.shared.open(URL(fileURLWithPath: file.filePath))
+                    } label: {
+                        Image(systemName: "arrow.up.right.square")
+                            .font(.caption)
+                            .foregroundStyle(.blue)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Open file")
+
+                    Button {
+                        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: file.filePath)])
+                    } label: {
+                        Image(systemName: "folder")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Show in Finder")
+                }
+            }
         }
         .padding(8)
         .background(Color(.controlBackgroundColor).opacity(0.5))
@@ -230,6 +258,11 @@ struct FileChipView: View {
             RoundedRectangle(cornerRadius: 8)
                 .stroke(Color.gray.opacity(0.15), lineWidth: 1)
         )
+        .onTapGesture {
+            if FileManager.default.fileExists(atPath: file.filePath) {
+                NSWorkspace.shared.open(URL(fileURLWithPath: file.filePath))
+            }
+        }
     }
 
     private func iconForMime(_ mime: String) -> String {
@@ -238,6 +271,7 @@ struct FileChipView: View {
         if mime.hasPrefix("audio/") { return "waveform" }
         if mime.contains("pdf") { return "doc.richtext" }
         if mime.contains("json") { return "curlybraces" }
+        if mime.contains("markdown") || mime.contains("md") { return "doc.text" }
         return "doc"
     }
 }

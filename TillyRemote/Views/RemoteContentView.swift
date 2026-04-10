@@ -1,118 +1,216 @@
 import SwiftUI
 import TillyCore
 import UIKit
+import PhotosUI
+import UniformTypeIdentifiers
+
+// MARK: - Main Content View (ChatGPT-style sidebar drawer)
 
 struct RemoteContentView: View {
     @Environment(AuthServiceIOS.self) private var authService
     @Environment(FirebaseRelayIOS.self) private var relay
+    @State private var showSidebar = false
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if !relay.sessions.isEmpty || relay.currentSession != nil {
+        ZStack(alignment: .leading) {
+            // Main chat area
+            NavigationStack {
+                Group {
                     if relay.currentSession != nil {
                         RemoteChatViewFirebase()
+                    } else if relay.macOnline {
+                        RemoteMacStatusPlaceholder()
                     } else {
-                        RemoteSessionListFirebase()
+                        RemoteMacStatusView()
                     }
-                } else {
-                    RemoteMacStatusView()
                 }
-            }
-            .navigationTitle("Tilly Remote")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    if relay.currentSession != nil {
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button { withAnimation(.easeInOut(duration: 0.25)) { showSidebar.toggle() } } label: {
+                            Image(systemName: "line.3.horizontal")
+                                .font(.title3)
+                        }
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
                         Button {
-                            relay.currentSession = nil
-                        } label: {
-                            Label("Sessions", systemImage: "chevron.left")
-                        }
-                    }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button("New Chat") {
                             relay.createNewSession()
+                        } label: {
+                            Image(systemName: "square.and.pencil")
+                                .font(.title3)
                         }
-                        Divider()
-
-                        Button("Sign Out", role: .destructive) {
-                            relay.stop()
-                            authService.signOut()
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
                     }
                 }
+                .navigationTitle(relay.currentSession?.title ?? "Tilly")
+                .navigationBarTitleDisplayMode(.inline)
             }
-            .sheet(isPresented: Binding(
-                get: { relay.showAskUser },
-                set: { newValue in if !newValue { relay.showAskUser = false } }
-            )) {
-                RemoteAskUserFirebase()
-                    .environment(relay)
+
+            // Dim overlay when sidebar is open
+            if showSidebar {
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        withAnimation(.easeInOut(duration: 0.25)) { showSidebar = false }
+                    }
             }
+
+            // Sidebar drawer
+            if showSidebar {
+                SidebarDrawer(
+                    relay: relay,
+                    authService: authService,
+                    onClose: { withAnimation(.easeInOut(duration: 0.25)) { showSidebar = false } }
+                )
+                .frame(width: 280)
+                .transition(.move(edge: .leading))
+            }
+        }
+        .sheet(isPresented: Binding(
+            get: { relay.showAskUser },
+            set: { newValue in if !newValue { relay.showAskUser = false } }
+        )) {
+            RemoteAskUserFirebase()
+                .environment(relay)
         }
     }
 }
 
-// MARK: - Session List (Firebase)
+// MARK: - Sidebar Drawer
 
-struct RemoteSessionListFirebase: View {
+struct SidebarDrawer: View {
+    let relay: FirebaseRelayIOS
+    let authService: AuthServiceIOS
+    let onClose: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack {
+                Image(systemName: "sparkle")
+                    .font(.title2)
+                    .foregroundStyle(.purple)
+                Text("Tilly")
+                    .font(.title3.bold())
+                Spacer()
+                Button { onClose() } label: {
+                    Image(systemName: "xmark")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding()
+
+            Divider()
+
+            // New chat button
+            Button {
+                relay.createNewSession()
+                onClose()
+            } label: {
+                HStack {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundStyle(.blue)
+                    Text("New Chat")
+                        .font(.body)
+                    Spacer()
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 12)
+            }
+            .buttonStyle(.plain)
+
+            Divider()
+
+            // Session list
+            ScrollView {
+                LazyVStack(spacing: 2) {
+                    ForEach(relay.sessions) { session in
+                        Button {
+                            relay.currentSession = Session(
+                                id: session.id,
+                                title: session.title,
+                                providerID: session.providerID,
+                                modelID: session.modelID
+                            )
+                            relay.selectSession(id: session.id)
+                            onClose()
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(session.title)
+                                        .font(.subheadline)
+                                        .lineLimit(1)
+                                        .foregroundStyle(relay.currentSession?.id == session.id ? .blue : .primary)
+                                    Text(session.updatedAt, style: .relative)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                if relay.currentSession?.id == session.id {
+                                    Circle()
+                                        .fill(.blue)
+                                        .frame(width: 6, height: 6)
+                                }
+                            }
+                            .padding(.horizontal)
+                            .padding(.vertical, 10)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
+            Divider()
+
+            // Account
+            HStack {
+                Image(systemName: "person.circle.fill")
+                    .foregroundStyle(.blue)
+                VStack(alignment: .leading) {
+                    Text(authService.userName ?? "User")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                    Text(authService.userEmail ?? "")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button("Sign Out", role: .destructive) {
+                    relay.stop()
+                    authService.signOut()
+                }
+                .font(.caption)
+            }
+            .padding()
+        }
+        .background(Color(.systemBackground))
+    }
+}
+
+// MARK: - Mac Status Placeholder (when online but no session selected)
+
+struct RemoteMacStatusPlaceholder: View {
     @Environment(FirebaseRelayIOS.self) private var relay
 
     var body: some View {
-        List {
-            if relay.sessions.isEmpty {
-                HStack {
-                    ProgressView().scaleEffect(0.8)
-                    Text("Loading sessions...").foregroundStyle(.secondary)
-                }
-            } else {
-                ForEach(relay.sessions) { summary in
-                    Button {
-                        // Navigate immediately with placeholder, Firebase observer loads full data
-                        relay.currentSession = Session(
-                            id: summary.id,
-                            title: summary.title,
-                            providerID: summary.providerID,
-                            modelID: summary.modelID
-                        )
-                        relay.selectSession(id: summary.id)
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(summary.title)
-                                    .font(.body)
-                                    .lineLimit(1)
-                                HStack {
-                                    Text("\(summary.messageCount) messages")
-                                    Text("·")
-                                    Text(summary.updatedAt, style: .relative)
-                                }
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
-                        .padding(.vertical, 2)
-                    }
-                }
-            }
+        VStack(spacing: 16) {
+            Image(systemName: "bubble.left.and.bubble.right")
+                .font(.system(size: 40))
+                .foregroundStyle(.tertiary)
+            Text("Select a chat or start a new one")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
-        // Session list auto-refreshes via Firebase observer
     }
 }
 
-// MARK: - Chat View (Firebase)
+// MARK: - Chat View (Firebase) with file upload
 
 struct RemoteChatViewFirebase: View {
     @Environment(FirebaseRelayIOS.self) private var relay
     @State private var inputText = ""
+    @State private var showPhotoPicker = false
+    @State private var showFilePicker = false
+    @State private var selectedPhotos: [PhotosPickerItem] = []
     @FocusState private var isInputFocused: Bool
 
     var body: some View {
@@ -165,7 +263,22 @@ struct RemoteChatViewFirebase: View {
 
             Divider()
 
-            HStack(spacing: 8) {
+            // Input bar with attachment button
+            HStack(alignment: .bottom, spacing: 8) {
+                // Attachment menu
+                Menu {
+                    Button { showPhotoPicker = true } label: {
+                        Label("Photo Library", systemImage: "photo")
+                    }
+                    Button { showFilePicker = true } label: {
+                        Label("Browse Files", systemImage: "doc")
+                    }
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.gray)
+                }
+
                 TextField("Message...", text: $inputText, axis: .vertical)
                     .textFieldStyle(.plain)
                     .focused($isInputFocused)
@@ -185,9 +298,29 @@ struct RemoteChatViewFirebase: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
         }
-        .navigationTitle(relay.currentSession?.title ?? "Chat")
-        .navigationBarTitleDisplayMode(.inline)
         .onAppear { isInputFocused = true }
+        .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhotos, maxSelectionCount: 5, matching: .images)
+        .onChange(of: selectedPhotos) {
+            for item in selectedPhotos {
+                Task {
+                    if let data = try? await item.loadTransferable(type: Data.self) {
+                        // Send as text description since we can't attach to Firebase relay
+                        relay.sendMessage("[User attached an image (\(data.count / 1024)KB)]")
+                    }
+                }
+            }
+            selectedPhotos = []
+        }
+        .fileImporter(isPresented: $showFilePicker, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
+            guard case .success(let urls) = result else { return }
+            for url in urls {
+                guard url.startAccessingSecurityScopedResource() else { continue }
+                defer { url.stopAccessingSecurityScopedResource() }
+                let name = url.lastPathComponent
+                let size = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int64) ?? 0
+                relay.sendMessage("[User attached file: \(name) (\(ByteCountFormatter.string(fromByteCount: size, countStyle: .file)))]")
+            }
+        }
     }
 
     private func sendMessage() {
@@ -198,7 +331,7 @@ struct RemoteChatViewFirebase: View {
     }
 }
 
-// MARK: - Ask User (Firebase)
+// MARK: - Ask User (Firebase) with custom input
 
 struct RemoteAskUserFirebase: View {
     @Environment(FirebaseRelayIOS.self) private var relay
@@ -219,7 +352,6 @@ struct RemoteAskUserFirebase: View {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
 
-                    // 3 preset options
                     VStack(spacing: 10) {
                         ForEach(Array(relay.askUserOptions.enumerated()), id: \.offset) { index, option in
                             Button(action: {
@@ -254,7 +386,6 @@ struct RemoteAskUserFirebase: View {
 
                     Divider().padding(.horizontal)
 
-                    // Custom input (4th option)
                     VStack(spacing: 8) {
                         Text("Or type your own response:")
                             .font(.caption)
@@ -297,7 +428,7 @@ struct RemoteAskUserFirebase: View {
     }
 }
 
-// MARK: - Message Row
+// MARK: - Message Row (with rich content + document preview)
 
 struct RemoteMessageRow: View {
     let message: Message
@@ -341,17 +472,7 @@ struct RemoteMessageRow: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                     case .fileReference(let file):
-                        HStack(spacing: 8) {
-                            Image(systemName: "doc.fill").foregroundStyle(.blue)
-                            VStack(alignment: .leading) {
-                                Text(file.fileName).font(.caption).fontWeight(.medium)
-                                Text(ByteCountFormatter.string(fromByteCount: file.sizeBytes, countStyle: .file))
-                                    .font(.caption2).foregroundStyle(.secondary)
-                            }
-                        }
-                        .padding(8)
-                        .background(Color(.tertiarySystemBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        DocumentChipView(file: file)
                     }
                 }
 
@@ -372,5 +493,94 @@ struct RemoteMessageRow: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
         .background(message.role == .assistant ? Color(.secondarySystemBackground).opacity(0.5) : .clear)
+    }
+}
+
+// MARK: - Document Chip (tappable, shows preview/share)
+
+struct DocumentChipView: View {
+    let file: FileAttachment
+    @State private var showPreview = false
+
+    var body: some View {
+        Button {
+            showPreview = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: iconForMime(file.mimeType))
+                    .font(.title3)
+                    .foregroundStyle(.blue)
+                    .frame(width: 32, height: 32)
+                    .background(Color.blue.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(file.fileName)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .lineLimit(1)
+                    Text(ByteCountFormatter.string(fromByteCount: file.sizeBytes, countStyle: .file))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                Image(systemName: "arrow.down.circle")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(8)
+            .background(Color(.tertiarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showPreview) {
+            DocumentPreviewSheet(file: file)
+        }
+    }
+
+    private func iconForMime(_ mime: String) -> String {
+        if mime.hasPrefix("image/") { return "photo" }
+        if mime.hasPrefix("video/") { return "film" }
+        if mime.hasPrefix("audio/") { return "waveform" }
+        if mime.contains("pdf") { return "doc.richtext" }
+        if mime.contains("json") { return "curlybraces" }
+        return "doc"
+    }
+}
+
+// MARK: - Document Preview Sheet
+
+struct DocumentPreviewSheet: View {
+    let file: FileAttachment
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 16) {
+                Image(systemName: "doc.fill")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.blue)
+
+                Text(file.fileName)
+                    .font(.headline)
+
+                Text(ByteCountFormatter.string(fromByteCount: file.sizeBytes, countStyle: .file))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                Text("This file is stored on your Mac. Open Tilly on your Mac to view the full document.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
+            .padding()
+            .navigationTitle("Document")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 }
