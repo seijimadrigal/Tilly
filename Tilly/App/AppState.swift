@@ -607,15 +607,16 @@ final class AppState {
                     return results
                 }
 
-                // Append results in original order
+                // Append results in original order — offload large results to files
                 for tc in toolCalls {
                     if let (_, toolResult) = toolResults.first(where: { $0.0.id == tc.id }) {
                         currentToolName = tc.function.name
                         currentToolSummary = extractToolSummary(tc)
 
+                        let trimmedResult = offloadIfLarge(toolResult, callID: tc.id)
                         let toolMessage = Message(
                             role: .tool,
-                            content: [.text(toolResult.content)],
+                            content: [.text(trimmedResult.content)],
                             toolCallID: tc.id
                         )
                         session.appendMessage(toolMessage)
@@ -642,6 +643,22 @@ final class AppState {
     }
 
     /// Extract a brief summary from tool call arguments for progress display.
+    /// Offload large tool results to file, keep only a preview in the message history.
+    /// This prevents context overflow from web_fetch, execute_command, etc.
+    private func offloadIfLarge(_ result: ToolResult, callID: String) -> ToolResult {
+        let maxInline = 1500
+        guard result.content.count > maxInline else { return result }
+
+        let path = "/tmp/tilly-tool-\(callID.prefix(8)).txt"
+        try? result.content.write(toFile: path, atomically: true, encoding: .utf8)
+
+        let preview = String(result.content.prefix(500))
+            .replacingOccurrences(of: "\n", with: " ")
+        let replacement = "[Full output saved: \(path) (\(result.content.count) chars)]\n\(preview)..."
+        DiagnosticLogger.shared.log(.system, "Offloaded \(result.content.count) chars to \(path)")
+        return ToolResult(content: replacement, isError: result.isError)
+    }
+
     private func extractToolSummary(_ toolCall: ToolCall) -> String {
         guard let data = toolCall.function.arguments.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
@@ -891,35 +908,67 @@ final class AppState {
     }
 
     /// Estimate token count (~4 chars per token) and prune old messages if over budget.
+    /// Dual-threshold context compression (Hermes pattern).
+    /// Soft at 30% (~24K tokens): summarize old tool results.
+    /// Hard at 50% (~40K tokens): full prune to last 6 messages.
     private func compressIfNeeded(_ messages: [ChatCompletionRequest.ChatMessage]) -> [ChatCompletionRequest.ChatMessage] {
-        let contextBudget = 80_000  // Conservative budget for most models
-        let threshold = contextBudget * 60 / 100  // Compress at 60%
-
         let totalChars = messages.reduce(0) { $0 + ($1.content?.count ?? 0) }
         let estimatedTokens = totalChars / 4
 
-        guard estimatedTokens > threshold else { return messages }
+        let softThreshold = 24_000   // 30% of 80K budget — summarize tool results
+        let hardThreshold = 40_000   // 50% of 80K budget — full compression
 
-        // Keep: system prompt (first), last 10 messages
-        guard messages.count > 11 else { return messages }
+        guard messages.count > 3 else { return messages }
 
-        let systemPrompt = messages[0]
-        let middleMessages = Array(messages[1..<(messages.count - 10)])
-        let recentMessages = Array(messages.suffix(10))
+        // --- Hard compression: keep system + last 6, summarize everything else ---
+        if estimatedTokens > hardThreshold {
+            DiagnosticLogger.shared.log(.system, "Hard compression: \(estimatedTokens) tokens → keeping last 6 msgs")
 
-        // Summarize the middle (oldest) messages
-        let summary = middleMessages.prefix(20).compactMap { msg -> String? in
-            guard let content = msg.content, !content.isEmpty else { return nil }
-            let preview = String(content.prefix(100)).replacingOccurrences(of: "\n", with: " ")
-            return "[\(msg.role)]: \(preview)"
-        }.joined(separator: "\n")
+            let systemPrompt = messages[0]
+            let keepCount = min(6, messages.count - 1)
+            let recentMessages = Array(messages.suffix(keepCount))
+            let prunedCount = messages.count - 1 - keepCount
 
-        let compressionNote = ChatCompletionRequest.ChatMessage(
-            role: "system",
-            content: "[Context compressed: \(middleMessages.count) older messages summarized]\n\(summary)"
-        )
+            let compressionNote = ChatCompletionRequest.ChatMessage(
+                role: "system",
+                content: "[Context compressed: \(prunedCount) older messages removed to fit context window. Use scratchpad_read and memory_search to recover context if needed.]"
+            )
 
-        return [systemPrompt, compressionNote] + recentMessages
+            return [systemPrompt, compressionNote] + recentMessages
+        }
+
+        // --- Soft compression: truncate old tool results to 1 line each ---
+        if estimatedTokens > softThreshold {
+            DiagnosticLogger.shared.log(.system, "Soft compression: \(estimatedTokens) tokens → trimming old tool results")
+
+            let protectedTail = 8
+            guard messages.count > protectedTail + 1 else { return messages }
+
+            var compressed = [messages[0]]  // System prompt
+
+            // Process middle messages — trim tool results
+            let middleEnd = messages.count - protectedTail
+            for i in 1..<middleEnd {
+                let msg = messages[i]
+                if msg.role == "tool", let content = msg.content, content.count > 200 {
+                    // Replace verbose tool result with 1-line summary
+                    let preview = String(content.prefix(100)).replacingOccurrences(of: "\n", with: " ")
+                    compressed.append(ChatCompletionRequest.ChatMessage(
+                        role: "tool",
+                        content: "[trimmed] \(preview)...",
+                        toolCallID: msg.toolCallID
+                    ))
+                } else {
+                    compressed.append(msg)
+                }
+            }
+
+            // Keep recent messages untouched
+            compressed.append(contentsOf: messages.suffix(protectedTail))
+            return compressed
+        }
+
+        return messages
     }
 
     // MARK: - Types
@@ -941,92 +990,36 @@ final class AppState {
     // MARK: - Dynamic System Prompt
 
     func buildDynamicSystemPrompt() -> String {
-        let memoryIndex = memoryService.loadIndex()
-        let skillIndex = skillService.loadIndex()
-        let scratchpad = scratchpadService.read()
+        // Only show recent memories/skills to save tokens
+        let allMemories = (try? memoryService.list()) ?? []
+        let recentMemories = allMemories.suffix(3).map(\.indexLine).joined(separator: "\n")
+        let memoryCount = allMemories.count
+
+        let allSkills = (try? skillService.list()) ?? []
+        let recentSkills = allSkills.suffix(3).map(\.indexLine).joined(separator: "\n")
+        let skillCount = allSkills.count
+
+        let scratchpad = String(scratchpadService.read().prefix(800))
 
         return """
-        You are Tilly, a powerful AI agent running as a native macOS application. You have direct access to the user's computer through tools, persistent memory, a skill library, and working scratchpad.
+        You are Tilly, an AI agent on macOS with full computer access via tools. Respond naturally — NEVER narrate your thinking.
 
-        CRITICAL: Always respond directly to the user in a natural, conversational tone. NEVER write your internal thoughts, reasoning process, or meta-commentary in your response. Do NOT say things like "The user is asking...", "Let me think about...", "I should...", or narrate what you're doing. Just respond naturally as if you're talking to a friend. Your output goes directly to the user — they see everything you write.
+        You have \(toolRegistry.definitions.count) tools (see tool definitions). Key ones: execute_command, read/write/edit_file, web_search, web_fetch, http_request, git, browser, screenshot, clipboard, memory_store/search, skill_run/chain/test/plan, delegate_task, ask_user, scratchpad_write/read, plan_task.
 
-        ## Tools
+        Set timeout on execute_command: 10 quick, 60 normal, 300 builds, 600 large, 900 docker.
+        Large tool results are auto-saved to /tmp/tilly-tool-*.txt — use read_file to access full output.
 
-        **Execution**: execute_command (shell), open_application, background_run (non-blocking)
-        **Files**: read_file, write_file, edit_file (find-and-replace), list_directory
-        **Web**: web_search (DuckDuckGo), web_fetch (read page), http_request (GET/POST/PUT/DELETE with headers+body)
-        **Browser**: browser (control Safari — navigate, read_page, run_javascript, click, type_text, list_tabs)
-        **Git**: git (status/diff/log/add/commit/branch/checkout/push/pull/stash/clone)
-        **System**: screenshot, clipboard (read/write), notify (macOS alerts), analyze_image (OCR + metadata)
-        **Audio**: audio (speak text aloud, play audio files, list voices)
-        **Advanced**: create_tool (write custom Python/Bash/Node scripts that persist), mcp (connect to MCP servers for external tools)
+        **Scratchpad** (session working memory):
+        \(scratchpad.isEmpty ? "(empty)" : scratchpad)
 
-        Set timeout on execute_command: 10 quick, 60 normal, 300 builds, 600 large ops, 900 docker/clone.
+        **Memory** (\(memoryCount) total — use memory_search for more):
+        \(recentMemories.isEmpty ? "(none)" : recentMemories)
+        Save memories AUTOMATICALLY: user prefs → user, feedback → feedback, project details → project, URLs → reference.
 
-        ## Working Scratchpad (Session Memory)
-        Your working memory for the current task. Use it to stay organized during complex work.
-        - **scratchpad_write**: Write/append sections (Plan, Progress, Findings, Notes)
-        - **scratchpad_read**: Read current scratchpad
-        - **plan_task**: Create a structured plan with numbered steps
+        **Skills** (\(skillCount) total — use skill_list for more):
+        \(recentSkills.isEmpty ? "(none)" : recentSkills)
 
-        ### Current Scratchpad
-        \(scratchpad.isEmpty ? "(empty — use plan_task to start)" : scratchpad)
-
-        ## Persistent Memory (Cross-Session)
-        - **memory_store**: Save info (types: user, feedback, project, reference)
-        - **memory_search**: Search by keyword/type
-        - **memory_list** / **memory_delete**: Manage memories
-
-        IMPORTANT — You MUST save memories in these situations:
-        - User tells you their name, job, preferences, or how they like to work → type: user
-        - User corrects you or gives feedback on your approach → type: feedback
-        - You discover project details (tech stack, file structure, goals) → type: project
-        - You find useful URLs, docs, or references → type: reference
-        Do this AUTOMATICALLY after learning the information. Don't ask permission. Don't wait. Just save it.
-
-        ### Known Memories
-        \(memoryIndex)
-
-        ## Skill Library
-        - **skill_create/run/list/delete** — manage individual skills
-        - **skill_chain** — run skills in sequence with data passing between steps
-        - **skill_test** — validate prerequisites (credentials in Keychain + memory, APIs, commands)
-        - **skill_plan** — auto-recommend the best skill chain for a task
-
-        When creating skills that need API keys: store in Keychain via `keychain save`, add `## Tests` section with `check: credential`, run `skill_test` before chaining.
-
-        Skills can declare: `inputs` (what they need), `outputs` (what they produce), `dependencies` (what must run first).
-
-        ### Available Skills
-        \(skillIndex)
-
-        ## User Interaction
-        - **ask_user**: Ask the user a question with 3 options when unsure.
-
-        ## Sub-Agent Delegation
-        - **delegate_task**: Spawn a child agent to handle a sub-task independently. The child runs its own tool loop and returns results. Use this for:
-          - Research tasks: delegate web research while you work on implementation
-          - File analysis: delegate reading/exploring a codebase
-          - Parallel work: split a complex task into parts
-          - Specialized roles: "code reviewer", "researcher", "documentation writer"
-        The child cannot see this conversation. Give it complete, self-contained instructions.
-
-        ## Guidelines
-
-        1. **Plan before executing.** For tasks needing 3+ tool calls, use plan_task first.
-        2. **Be proactive.** Actually do things, don't explain how.
-        3. **Use the scratchpad.** Track progress, record findings, update your plan.
-        4. **Save memories.** When you learn user preferences, project context, or feedback — save it immediately.
-        5. **Ask when unsure.** Use ask_user for ambiguity or before destructive actions.
-        6. **Read before modifying.** Always read files before editing.
-        7. **Handle errors gracefully.** Try alternatives on failure.
-        8. **No destructive commands without confirmation.**
-
-        ## Self-Improvement
-        After completing a multi-step task (5+ tool calls):
-        1. If the workflow was useful and reusable, save it as a skill (skill_create).
-        2. Store what worked/didn't as a feedback memory (memory_store, type: feedback).
-        3. Only do this for genuinely reusable patterns, not one-off tasks.
+        **Rules**: Plan before 3+ tool calls. Be proactive. Use scratchpad. Save memories. Ask when unsure. Read before editing. No destructive commands without confirmation. After multi-step tasks, save reusable workflows as skills.
         """
     }
 }
