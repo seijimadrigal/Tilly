@@ -203,8 +203,17 @@ struct AccountSettingsView: View {
                         appState.firebaseRelay.stop()
                     }
                 } else {
-                    Text("Not signed in")
+                    Text("Sign in to sync sessions across devices")
                         .foregroundStyle(.secondary)
+
+                    Button {
+                        Task { await appState.authService.signInWithGoogle() }
+                    } label: {
+                        HStack {
+                            Image(systemName: "globe")
+                            Text("Sign in with Google")
+                        }
+                    }
                 }
             }
 

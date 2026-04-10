@@ -26,34 +26,25 @@ struct TillyApp: App {
     @State private var appState: AppState
 
     init() {
-        // Force Firebase to configure before AppState is created
         _ = _firebaseConfigured
         _appState = State(initialValue: AppState())
     }
 
     var body: some Scene {
         WindowGroup {
-            Group {
-                if appState.authService.isSignedIn {
-                    ContentView()
-                        .environment(appState)
-                } else {
-                    SignInView()
-                        .environment(appState)
+            ContentView()
+                .environment(appState)
+                .onOpenURL { url in
+                    GIDSignIn.sharedInstance.handle(url)
                 }
-            }
-            .onOpenURL { url in
-                GIDSignIn.sharedInstance.handle(url)
-            }
-            .onChange(of: appState.authService.isSignedIn) {
-                appState.onAuthStateChanged()
-            }
-            .onAppear {
-                // Start relay if already signed in from previous session
-                if appState.authService.isSignedIn {
+                .onChange(of: appState.authService.isSignedIn) {
                     appState.onAuthStateChanged()
                 }
-            }
+                .onAppear {
+                    if appState.authService.isSignedIn {
+                        appState.onAuthStateChanged()
+                    }
+                }
         }
         .commands {
             AppCommands(appState: appState)
