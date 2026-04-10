@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Hidden diagnostic log viewer — accessible via Cmd+Shift+L.
 struct LogViewerView: View {
+    @Environment(\.dismiss) private var dismiss
     @State private var entries: [DiagnosticLogger.LogEntry] = []
     @State private var filterCategory: DiagnosticLogger.LogEntry.Category?
     @State private var searchText = ""
@@ -11,6 +12,19 @@ struct LogViewerView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
+                Button {
+                    dismiss()
+                    Task { @MainActor in
+                        DiagnosticLogger.shared.showLogViewer = false
+                    }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut(.escape, modifiers: [])
+
                 Text("Diagnostic Log")
                     .font(.headline)
 
