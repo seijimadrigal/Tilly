@@ -4,6 +4,9 @@ import TillyCore
 import TillyProviders
 import TillyStorage
 import TillyTools
+#if os(macOS)
+import Security
+#endif
 
 @MainActor
 @Observable
@@ -19,6 +22,17 @@ final class AppState {
     var selectedModelID: String = "glm-5.1"
     var availableModels: [ModelInfo] = []
     var isLoadingModels: Bool = false
+
+    // MARK: - Detail Panel Routing
+    enum DetailViewTarget: Equatable {
+        case chat
+        case memoryDetail(MemoryEntry)
+        case skillDetail(SkillEntry)
+        case credentialDetail(KeychainCredential)
+    }
+    var detailTarget: DetailViewTarget = .chat
+
+    func showChat() { detailTarget = .chat }
 
     // MARK: - Session Management
     var sessions: [Session] = []
@@ -988,6 +1002,29 @@ final class AppState {
     }
 
     // MARK: - Dynamic System Prompt
+
+    // MARK: - Credential Listing (Keychain)
+
+    #if os(macOS)
+    func listCredentials() -> [KeychainCredential] {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassInternetPassword,
+            kSecReturnAttributes as String: true,
+            kSecMatchLimit as String: kSecMatchLimitAll,
+        ]
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        guard status == errSecSuccess, let items = result as? [[String: Any]] else { return [] }
+
+        return items.compactMap { item in
+            let server = item[kSecAttrServer as String] as? String ?? ""
+            let account = item[kSecAttrAccount as String] as? String ?? ""
+            let label = item[kSecAttrLabel as String] as? String ?? server
+            guard !server.isEmpty || !account.isEmpty else { return nil }
+            return KeychainCredential(label: label, server: server, account: account)
+        }.sorted { $0.label < $1.label }
+    }
+    #endif
 
     func buildDynamicSystemPrompt() -> String {
         // Only show recent memories/skills to save tokens

@@ -9,12 +9,15 @@
 /* Begin PBXBuildFile section */
 		061EC42F7F2355B4EC80B9D1 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 8C6547B00D8B83B42613C6EC /* FirebaseAuth */; };
 		081117EAFF7088259E542D4A /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7714F7D37E3C1AE987EAE62 /* AppState.swift */; };
+		0C0DACFE3DE73099C0D92062 /* ModelPopoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DFA74C474FC393767D0A1D0 /* ModelPopoverView.swift */; };
+		14F89FE83D1C7503A8B0E372 /* CredentialDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AE0E9B67DDA2A3814F64F33 /* CredentialDetailView.swift */; };
 		18634CDFD62DBD5A4571B6DD /* MessageContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2AE45D10BB1F0066765B9A6 /* MessageContentView.swift */; };
 		228D0C682B4DD293DBF8751E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EFCDF4FAD0857382E309F2E1 /* Assets.xcassets */; };
 		2B47E44C85F561AEFE05F6D8 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = AC138233DC34F304AFF7022E /* FirebaseDatabase */; };
 		32F2EBB7E8409FC7C9E989AE /* FirebaseRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60CA60FD3AA2EF8AD6FC963A /* FirebaseRelay.swift */; };
 		352C541AA66FEC82ABFD4B1B /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = C73A81C3E2D23BD40FC10966 /* GoogleService-Info.plist */; };
 		35953C20FEBE657284212099 /* TillyTools in Frameworks */ = {isa = PBXBuildFile; productRef = 4549431E15F91AEBCB52AA51 /* TillyTools */; };
+		399B8DFB007667E4D851D371 /* SkillDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0D7DD950B03D40DC3F96668 /* SkillDetailView.swift */; };
 		425916D524D5EBD17B859F90 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = D6DBE6A558498254AABC3C73 /* GoogleService-Info.plist */; };
 		4397EEF8ADF15BB331027A47 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7539F33A7EFEFEF5758F954 /* SidebarView.swift */; };
 		43E113F131D0EC239F90CD41 /* DiagnosticLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DD3E91100BA3493C4790C5A /* DiagnosticLogger.swift */; };
@@ -23,6 +26,7 @@
 		52F39663C346816AAE5B5E55 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C151A060A75E2FAF23B86943 /* SignInView.swift */; };
 		5A10D82BFAD30352F6170C9A /* TillyCore in Frameworks */ = {isa = PBXBuildFile; productRef = B64A66864A186E577D58E430 /* TillyCore */; };
 		61A93D2DBF8252EEB722A12F /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4960611D38330D558F611FE8 /* SignInView.swift */; };
+		629E6EE1AB3BF37343B61ED2 /* KeychainCredential.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDA8151488D0CC87875A2E3 /* KeychainCredential.swift */; };
 		69333B0CB6EAA2F06DCFFB38 /* LogViewerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4FFA69597E54395FA6AB7BA /* LogViewerView.swift */; };
 		6AAE6F89D9A28BAF3878ABC0 /* TillyStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 41D604BDF3CE4BE6C9C398C8 /* TillyStorage */; };
 		6AF164B05D1390D2E88BB423 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 55B44A26794936896895EE78 /* GoogleSignIn */; };
@@ -34,27 +38,27 @@
 		90D25607992378A8D9EFA4A1 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 3ED982342F0E530444BEF5E5 /* GoogleSignInSwift */; };
 		93F132421C0AFC4B42812464 /* AppCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0391F5766AB5078D5BC063 /* AppCommands.swift */; };
 		947BC7FC90CE33B197B35BCA /* TillyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A13ACCD4FBF537ADE9A0734 /* TillyApp.swift */; };
-		992B4093B0D0631990EBD38E /* MemoryBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 284A846CCC67E7D89529FE2C /* MemoryBrowserView.swift */; };
 		9ED5B3A300C8CFB39F05946B /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3911FCF3D620AFFCE1F39BA6 /* AuthService.swift */; };
 		A197CFE0888845B000B2DC32 /* TillyCore in Frameworks */ = {isa = PBXBuildFile; productRef = 12341AC689D4CF663BEC3587 /* TillyCore */; };
 		A62C7B0C85A93C1FA7A21396 /* RemoteContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 480176AEFE0E2CE531D0FE75 /* RemoteContentView.swift */; };
+		C5C9F3B88B66ACFEFA2E3909 /* MemoryDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04A66A2CDFC8992308103DC6 /* MemoryDetailView.swift */; };
 		C9A5EA6E59400D999D4688A4 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A2D5E48C00DA600676E68B5 /* ContentView.swift */; };
 		CAECE438EBA8E08CF5EC3858 /* TillyProviders in Frameworks */ = {isa = PBXBuildFile; productRef = 0184A2A8C2F8F70485EEEC86 /* TillyProviders */; };
 		CC717D363813E811C3EA95C9 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C5ED9A99FF27D0D2869F82C /* ChatView.swift */; };
 		D47983A3F0BDFDB50BEF59D9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 71DA0E94FACD996ED7607F9C /* Assets.xcassets */; };
 		ED6F4EBC715D9F5721BC5E4E /* InputBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362249974F6531D337040ED5 /* InputBarView.swift */; };
-		F3415953B7BEC11C7533FD5F /* SkillBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69477CA7E4BAA8FB7123141D /* SkillBrowserView.swift */; };
 		F5CC56D3E12B84FF1683736D /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 9E47E74586F91633EF678E5F /* FirebaseAuth */; };
 		FAD6EA9F92CFE9B85DF30DE2 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21ADB93C2860F3A164136A34 /* AuthService.swift */; };
 		FED2CB3442AE8B004678DCE4 /* MessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D7DB2AB7E6C97C4B5FBF5DE /* MessageView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		04A66A2CDFC8992308103DC6 /* MemoryDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryDetailView.swift; sourceTree = "<group>"; };
+		0AE0E9B67DDA2A3814F64F33 /* CredentialDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialDetailView.swift; sourceTree = "<group>"; };
 		1C3DBBEFA221356A5859B0D8 /* FirebaseRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseRelay.swift; sourceTree = "<group>"; };
 		21ADB93C2860F3A164136A34 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		21D2BFF89B7A7E7C9BEE38B7 /* TillyRemote.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TillyRemote.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2747F1D17580BBF46EF32268 /* RemoteMacStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteMacStatusView.swift; sourceTree = "<group>"; };
-		284A846CCC67E7D89529FE2C /* MemoryBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryBrowserView.swift; sourceTree = "<group>"; };
 		317F09C0FAE8D0CEC4ACC685 /* TillyProviders */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TillyProviders; path = Packages/TillyProviders; sourceTree = SOURCE_ROOT; };
 		362249974F6531D337040ED5 /* InputBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputBarView.swift; sourceTree = "<group>"; };
 		3911FCF3D620AFFCE1F39BA6 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
@@ -65,7 +69,7 @@
 		4DD3E91100BA3493C4790C5A /* DiagnosticLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticLogger.swift; sourceTree = "<group>"; };
 		60CA60FD3AA2EF8AD6FC963A /* FirebaseRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseRelay.swift; sourceTree = "<group>"; };
 		627C01D94D3C5900E57F857D /* TillyRemoteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TillyRemoteApp.swift; sourceTree = "<group>"; };
-		69477CA7E4BAA8FB7123141D /* SkillBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillBrowserView.swift; sourceTree = "<group>"; };
+		6DFA74C474FC393767D0A1D0 /* ModelPopoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelPopoverView.swift; sourceTree = "<group>"; };
 		71DA0E94FACD996ED7607F9C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		8B2F3390EB981E65499E8770 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		8D7DB2AB7E6C97C4B5FBF5DE /* MessageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageView.swift; sourceTree = "<group>"; };
@@ -82,9 +86,11 @@
 		C73A81C3E2D23BD40FC10966 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		D574CAEF69385E8BFF9B7F45 /* Tilly.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tilly.entitlements; sourceTree = "<group>"; };
 		D6DBE6A558498254AABC3C73 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		E0D7DD950B03D40DC3F96668 /* SkillDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillDetailView.swift; sourceTree = "<group>"; };
 		E4FFA69597E54395FA6AB7BA /* LogViewerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogViewerView.swift; sourceTree = "<group>"; };
 		EFCDF4FAD0857382E309F2E1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F7714F7D37E3C1AE987EAE62 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		FEDA8151488D0CC87875A2E3 /* KeychainCredential.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainCredential.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -199,6 +205,7 @@
 				2C37FC0FB1824B00FE597F8C /* Auth */,
 				A5B9530F82B4F6A90703D210 /* Chat */,
 				257EF4FF1812AD3DE4E90D4E /* CodeReview */,
+				A5F3B27F78EF6E508D85A9A3 /* Detail */,
 				F8805B096768835EAB78D46F /* Settings */,
 				067CCE66465E6AFF919456B7 /* Shared */,
 				AF18AA558EFB8AE0176F06ED /* Sidebar */,
@@ -251,6 +258,16 @@
 			path = Chat;
 			sourceTree = "<group>";
 		};
+		A5F3B27F78EF6E508D85A9A3 /* Detail */ = {
+			isa = PBXGroup;
+			children = (
+				0AE0E9B67DDA2A3814F64F33 /* CredentialDetailView.swift */,
+				04A66A2CDFC8992308103DC6 /* MemoryDetailView.swift */,
+				E0D7DD950B03D40DC3F96668 /* SkillDetailView.swift */,
+			);
+			path = Detail;
+			sourceTree = "<group>";
+		};
 		AE0085A10CDF9A0B6AF107D1 /* Views */ = {
 			isa = PBXGroup;
 			children = (
@@ -274,9 +291,8 @@
 		AF18AA558EFB8AE0176F06ED /* Sidebar */ = {
 			isa = PBXGroup;
 			children = (
-				284A846CCC67E7D89529FE2C /* MemoryBrowserView.swift */,
+				6DFA74C474FC393767D0A1D0 /* ModelPopoverView.swift */,
 				B7539F33A7EFEFEF5758F954 /* SidebarView.swift */,
-				69477CA7E4BAA8FB7123141D /* SkillBrowserView.swift */,
 			);
 			path = Sidebar;
 			sourceTree = "<group>";
@@ -301,6 +317,7 @@
 			isa = PBXGroup;
 			children = (
 				C72467707BC128BCBD0C2711 /* App */,
+				FBB2E0F205EAEE9AB8A90060 /* Models */,
 				211C45E3B8CF87AE7B5F19EC /* Preview Content */,
 				E916DB19570033D41FDC4870 /* Services */,
 				53DBE898B99A5040CDD57B4F /* Views */,
@@ -341,6 +358,14 @@
 				8B2F3390EB981E65499E8770 /* SettingsView.swift */,
 			);
 			path = Settings;
+			sourceTree = "<group>";
+		};
+		FBB2E0F205EAEE9AB8A90060 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				FEDA8151488D0CC87875A2E3 /* KeychainCredential.swift */,
+			);
+			path = Models;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -488,17 +513,20 @@
 				9ED5B3A300C8CFB39F05946B /* AuthService.swift in Sources */,
 				CC717D363813E811C3EA95C9 /* ChatView.swift in Sources */,
 				C9A5EA6E59400D999D4688A4 /* ContentView.swift in Sources */,
+				14F89FE83D1C7503A8B0E372 /* CredentialDetailView.swift in Sources */,
 				43E113F131D0EC239F90CD41 /* DiagnosticLogger.swift in Sources */,
 				77162C6968EA9D5587652479 /* FirebaseRelay.swift in Sources */,
 				ED6F4EBC715D9F5721BC5E4E /* InputBarView.swift in Sources */,
+				629E6EE1AB3BF37343B61ED2 /* KeychainCredential.swift in Sources */,
 				69333B0CB6EAA2F06DCFFB38 /* LogViewerView.swift in Sources */,
-				992B4093B0D0631990EBD38E /* MemoryBrowserView.swift in Sources */,
+				C5C9F3B88B66ACFEFA2E3909 /* MemoryDetailView.swift in Sources */,
 				18634CDFD62DBD5A4571B6DD /* MessageContentView.swift in Sources */,
 				FED2CB3442AE8B004678DCE4 /* MessageView.swift in Sources */,
+				0C0DACFE3DE73099C0D92062 /* ModelPopoverView.swift in Sources */,
 				50A406395CF1EDD23D21F168 /* SettingsView.swift in Sources */,
 				4397EEF8ADF15BB331027A47 /* SidebarView.swift in Sources */,
 				52F39663C346816AAE5B5E55 /* SignInView.swift in Sources */,
-				F3415953B7BEC11C7533FD5F /* SkillBrowserView.swift in Sources */,
+				399B8DFB007667E4D851D371 /* SkillDetailView.swift in Sources */,
 				947BC7FC90CE33B197B35BCA /* TillyApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
