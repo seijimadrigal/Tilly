@@ -36,6 +36,9 @@ public final class MemoryService: @unchecked Sendable {
     /// Check if Memcloud sync is enabled and reachable.
     public var isMemcloudEnabled: Bool { memcloudClient != nil }
 
+    /// Current provenance context for memory sync. Set by AppState before agent rounds.
+    public var currentProvenance: MemcloudClient.Provenance?
+
     // MARK: - CRUD
 
     public func store(name: String, type: MemoryType, content: String) throws -> MemoryEntry {
@@ -71,11 +74,24 @@ public final class MemoryService: @unchecked Sendable {
         try fileContent.write(to: filePath, atomically: true, encoding: .utf8)
         try rebuildIndex()
 
-        // Background sync to Memcloud (non-blocking)
+        // Background sync to Memcloud (non-blocking, with privacy + dedup checks)
         if let client = memcloudClient {
-            Task.detached { [entry] in
-                _ = try? await client.syncEntry(entry)
+            let privacyLevel = PrivacyFilter.classify(entry.content)
+            if privacyLevel != .sensitive {
+                let provenance = currentProvenance
+                Task.detached { [entry, provenance] in
+                    do {
+                        let isDup = try await client.isDuplicate(content: entry.content)
+                        if !isDup {
+                            _ = try? await client.syncEntry(entry, provenance: provenance)
+                        }
+                    } catch {
+                        // Dedup check failed (network issue) — sync anyway
+                        _ = try? await client.syncEntry(entry, provenance: provenance)
+                    }
+                }
             }
+            // Sensitive memories stay local-only (no cloud sync)
         }
 
         return entry

@@ -92,6 +92,12 @@ final class AppState {
         "scratchpad_write", "scratchpad_read", "delegate_task",
     ]
 
+    // MARK: - Memcloud Cache (Feature 5: Auto-recall)
+    /// Cached Memcloud context for system prompt injection
+    private var cachedMemcloudContext: String?
+    private var cachedSessionSummaries: String?
+    private var memcloudFetchTask: Task<Void, Never>?
+
     // MARK: - Progress Visibility
     var agentRound: Int = 0
     var currentToolName: String?
@@ -127,6 +133,8 @@ final class AppState {
         restoreProviderSelection()
         authService.restoreSession()
         setupMemcloud()
+        setupConsolidationHandler()
+        setupSuggestSkillsHandler()
     }
 
     private func setupMemcloud() {
@@ -135,6 +143,51 @@ final class AppState {
             userId: NSUserName()
         )
         DiagnosticLogger.shared.log(.system, "Memcloud sync enabled for user \(NSUserName())")
+    }
+
+    private func refreshMemcloudCache() {
+        memcloudFetchTask?.cancel()
+        memcloudFetchTask = Task { [weak self] in
+            guard let self, let client = self.memoryService.memcloudClient else { return }
+
+            async let recallResult = client.recall(tokenBudget: 2000, format: "markdown")
+            async let summaryResult = client.recallSessionSummaries(count: 3)
+
+            if let recall = try? await recallResult {
+                await MainActor.run { self.cachedMemcloudContext = recall.context }
+            }
+            if let summaries = try? await summaryResult {
+                let text = summaries.memories.map { "- \(String($0.content.prefix(300)))" }.joined(separator: "\n")
+                await MainActor.run { self.cachedSessionSummaries = text }
+            }
+        }
+    }
+
+    private func summarizeAndStoreSession(_ session: Session) {
+        guard session.messages.count >= 2,
+              let client = memoryService.memcloudClient else { return }
+
+        let relevant = session.messages
+            .filter { $0.role == .user || $0.role == .assistant }
+            .suffix(10)
+        let transcript = relevant.compactMap { msg -> String? in
+            let text = msg.content.compactMap { block -> String? in
+                if case .text(let t) = block { return t }
+                return nil
+            }.joined(separator: " ")
+            guard !text.isEmpty else { return nil }
+            return "\(msg.role == .user ? "User" : "Agent"): \(String(text.prefix(200)))"
+        }.joined(separator: "\n")
+
+        let summary = "Title: \(session.title)\nMessages: \(session.messages.count)\n\(transcript)"
+
+        Task.detached { [sessionId = session.id.uuidString, title = session.title, summary] in
+            _ = try? await client.storeSessionSummary(
+                sessionId: sessionId,
+                title: title,
+                summary: String(summary.prefix(2000))
+            )
+        }
     }
 
     // MARK: - Provider Selection Persistence
@@ -294,6 +347,20 @@ final class AppState {
         }
     }
 
+    private func setupConsolidationHandler() {
+        toolRegistry.memcloudConsolidateTool?.consolidationHandler = { [weak self] prompt in
+            // Simple pass-through — the consolidation tool will handle the LLM call
+            // In a full implementation, this would use SubAgentRunner
+            return prompt
+        }
+    }
+
+    private func setupSuggestSkillsHandler() {
+        toolRegistry.memcloudSuggestSkillsTool?.analysisHandler = { [weak self] prompt in
+            return prompt
+        }
+    }
+
     private func setupDelegateTaskHandler() {
         toolRegistry.delegateTaskTool?.handler = { [weak self] task, role, allowedTools, maxRounds in
             guard let self else { return "Sub-agent unavailable" }
@@ -347,7 +414,25 @@ final class AppState {
         )
 
         do {
-            return try await runner.run(task: task)
+            let result = try await runner.run(task: task)
+
+            // Auto-store sub-agent findings to Memcloud
+            if let client = memoryService.memcloudClient, !result.isEmpty {
+                let prov = MemcloudClient.Provenance(
+                    sourceTool: "delegate_task",
+                    sessionId: currentSession?.id.uuidString ?? "unknown",
+                    agentRole: role
+                )
+                Task.detached { [result, prov] in
+                    _ = try? await client.store(
+                        text: "[sub_agent] Role: \(prov.agentRole). Result: \(String(result.prefix(2000)))",
+                        sourceType: "sub_agent",
+                        provenance: prov
+                    )
+                }
+            }
+
+            return result
         } catch {
             return "Sub-agent error: \(error.localizedDescription)"
         }
@@ -434,6 +519,7 @@ final class AppState {
     }
 
     func createNewSession() {
+        if let current = currentSession { summarizeAndStoreSession(current) }
         scratchpadService.clear()
         let session = Session(
             systemPrompt: SystemPrompt(
@@ -447,6 +533,7 @@ final class AppState {
         currentSession = session
         sessionService.save(session)
         syncSessionToFirebase(session)
+        refreshMemcloudCache()
     }
 
     func selectSession(_ session: Session) {
@@ -557,6 +644,12 @@ final class AppState {
     /// The core agent loop: stream -> detect tool calls -> execute -> repeat
     private func runAgentLoop(session: inout Session, provider: any LLMProvider) async throws {
         agentRound = 0
+
+        memoryService.currentProvenance = MemcloudClient.Provenance(
+            sourceTool: "agent",
+            sessionId: currentSession?.id.uuidString ?? "unknown",
+            agentRole: "main"
+        )
 
         for round in 0..<maxToolRounds {
             agentRound = round + 1
@@ -1270,6 +1363,8 @@ final class AppState {
         \(recentMemories.isEmpty ? "(none)" : recentMemories)
         Save memories AUTOMATICALLY: user prefs → user, feedback → feedback, project details → project, URLs → reference.
         \(memoryService.isMemcloudEnabled ? "☁️ Memcloud sync ACTIVE — memories auto-sync to cloud. Use memcloud_recall for rich context retrieval." : "")
+        \(cachedMemcloudContext.map { "**Cloud Context**:\n\(String($0.prefix(1500)))\n" } ?? "")
+        \(cachedSessionSummaries.map { "**Recent Sessions**:\n\(String($0.prefix(800)))\n" } ?? "")
 
         **Skills** (\(skillCount) total — use skill_list for more):
         \(recentSkills.isEmpty ? "(none)" : recentSkills)

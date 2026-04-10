@@ -18,6 +18,9 @@ public final class ToolRegistry: @unchecked Sendable {
     public private(set) var skillChainTool: SkillChainTool?
     public private(set) var skillPlanTool: SkillPlanTool?
 
+    public private(set) var memcloudConsolidateTool: MemcloudConsolidateTool?
+    public private(set) var memcloudSuggestSkillsTool: MemcloudSuggestSkillsTool?
+
     public init() {}
 
     public func register(_ tool: any ToolExecutable) {
@@ -68,6 +71,16 @@ public final class ToolRegistry: @unchecked Sendable {
         // Memcloud recall (cloud memory context injection)
         registry.register(MemcloudRecallTool(service: memoryService))
 
+        // Memcloud consolidation (dream mode)
+        let consolidateTool = MemcloudConsolidateTool(service: memoryService)
+        registry.register(consolidateTool)
+        registry.memcloudConsolidateTool = consolidateTool
+
+        // Memcloud skill suggestions from patterns
+        let suggestSkillsTool = MemcloudSuggestSkillsTool(memoryService: memoryService, skillService: skillService)
+        registry.register(suggestSkillsTool)
+        registry.memcloudSuggestSkillsTool = suggestSkillsTool
+
         // Skill tools
         registry.register(SkillCreateTool(service: skillService))
         registry.register(SkillListTool(service: skillService))
@@ -88,7 +101,7 @@ public final class ToolRegistry: @unchecked Sendable {
         // Scratchpad / planning tools
         registry.register(ScratchpadWriteTool(service: scratchpadService))
         registry.register(ScratchpadReadTool(service: scratchpadService))
-        registry.register(PlanTaskTool(service: scratchpadService))
+        registry.register(PlanTaskTool(service: scratchpadService, memoryService: memoryService))
 
         // Browser, vision, audio, MCP, custom tools
         registry.register(BrowserTool())

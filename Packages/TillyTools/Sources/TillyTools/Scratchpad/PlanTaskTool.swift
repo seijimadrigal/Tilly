@@ -4,7 +4,11 @@ import TillyStorage
 
 public final class PlanTaskTool: ToolExecutable, @unchecked Sendable {
     private let service: ScratchpadService
-    public init(service: ScratchpadService) { self.service = service }
+    private let memoryService: MemoryService?
+    public init(service: ScratchpadService, memoryService: MemoryService? = nil) {
+        self.service = service
+        self.memoryService = memoryService
+    }
 
     public var definition: ToolDefinition {
         ToolDefinition(
@@ -54,6 +58,34 @@ public final class PlanTaskTool: ToolExecutable, @unchecked Sendable {
         for (i, step) in args.steps.enumerated() {
             plan += "- [ ] \(i + 1). \(step)\n"
         }
+
+        // Query Memcloud for lessons from similar past tasks
+        var lessons = ""
+        if let client = memoryService?.memcloudClient {
+            do {
+                let results = try await client.search(query: args.goal, topK: 5)
+                let relevant = results.memories.filter {
+                    ($0.rerank_score ?? $0.rrf_score ?? 0) > 0.3
+                }
+                if !relevant.isEmpty {
+                    lessons = "\n\n## Lessons from Memory\n"
+                    for mem in relevant.prefix(3) {
+                        lessons += "- \(String(mem.content.prefix(200)))\n"
+                    }
+                }
+            } catch {}
+        }
+        // Fallback to local memory
+        if lessons.isEmpty, let memService = memoryService {
+            let local = (try? memService.search(query: args.goal)) ?? []
+            if !local.isEmpty {
+                lessons = "\n\n## Lessons from Memory (local)\n"
+                for entry in local.prefix(3) {
+                    lessons += "- [\(entry.type.rawValue)] \(entry.name): \(String(entry.content.prefix(200)))\n"
+                }
+            }
+        }
+        plan += lessons
 
         service.write("")  // Clear first
         service.append(section: "Plan", content: plan)

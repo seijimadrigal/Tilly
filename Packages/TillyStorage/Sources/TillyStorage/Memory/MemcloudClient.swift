@@ -27,6 +27,22 @@ public final class MemcloudClient: @unchecked Sendable {
         }
     }
 
+    public struct Provenance: Sendable {
+        public let sourceTool: String
+        public let sessionId: String
+        public let agentRole: String
+
+        public init(sourceTool: String = "unknown", sessionId: String = "unknown", agentRole: String = "main") {
+            self.sourceTool = sourceTool
+            self.sessionId = sessionId
+            self.agentRole = agentRole
+        }
+
+        public var asMetadata: [String: String] {
+            ["source_tool": sourceTool, "session_id": sessionId, "agent_role": agentRole]
+        }
+    }
+
     // MARK: - Response Types
 
     public struct AddResponse: Codable, Sendable {
@@ -88,7 +104,7 @@ public final class MemcloudClient: @unchecked Sendable {
     // MARK: - Memory Operations
 
     /// Store a memory in Memcloud. The extraction pipeline runs server-side.
-    public func store(text: String, poolId: String? = nil, sourceType: String = "agent") async throws -> AddResponse {
+    public func store(text: String, poolId: String? = nil, sourceType: String = "agent", provenance: Provenance? = nil) async throws -> AddResponse {
         var body: [String: Any] = [
             "text": text,
             "user_id": config.userId,
@@ -96,6 +112,7 @@ public final class MemcloudClient: @unchecked Sendable {
             "source_type": sourceType
         ]
         if let poolId { body["pool_id"] = poolId }
+        if let provenance { body["metadata"] = provenance.asMetadata }
         return try await post("/memories/", body: body)
     }
 
@@ -140,9 +157,30 @@ public final class MemcloudClient: @unchecked Sendable {
     // MARK: - Sync
 
     /// Sync a local MemoryEntry to Memcloud.
-    public func syncEntry(_ entry: MemoryEntry) async throws -> AddResponse {
+    public func syncEntry(_ entry: MemoryEntry, provenance: Provenance? = nil) async throws -> AddResponse {
         let text = "[\(entry.type.rawValue)] \(entry.name): \(entry.content)"
-        return try await store(text: text, sourceType: "tilly_sync")
+        return try await store(text: text, sourceType: "tilly_sync", provenance: provenance)
+    }
+
+    /// Check if similar content already exists in Memcloud (for dedup).
+    public func isDuplicate(content: String, threshold: Double = 0.90) async throws -> Bool {
+        let snippet = String(content.prefix(200))
+        let response = try await search(query: snippet, topK: 3)
+        return response.memories.contains { result in
+            let score = result.rerank_score ?? result.rrf_score ?? result.confidence ?? 0.0
+            return score >= threshold
+        }
+    }
+
+    /// Store a session summary to Memcloud.
+    public func storeSessionSummary(sessionId: String, title: String, summary: String) async throws -> AddResponse {
+        let text = "[session_summary] Session '\(title)' (id: \(sessionId)): \(summary)"
+        return try await store(text: text, sourceType: "session_summary")
+    }
+
+    /// Recall recent session summaries.
+    public func recallSessionSummaries(count: Int = 3) async throws -> SearchResponse {
+        return try await search(query: "session_summary recent sessions", topK: count)
     }
 
     // MARK: - HTTP Helpers
