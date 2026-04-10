@@ -4,6 +4,9 @@ import TillyCore
 public final class MemoryService: @unchecked Sendable {
     public let memoryDirectory: URL
 
+    /// Optional Memcloud client for cloud sync. Set via `enableMemcloud()`.
+    public private(set) var memcloudClient: MemcloudClient?
+
     public init() {
         let appSupport = FileManager.default.urls(
             for: .applicationSupportDirectory, in: .userDomainMask
@@ -16,6 +19,22 @@ public final class MemoryService: @unchecked Sendable {
         self.memoryDirectory = directory
         ensureDirectoryExists()
     }
+
+    // MARK: - Memcloud Integration
+
+    /// Enable Memcloud cloud sync. Memories are stored locally first, then synced in background.
+    public func enableMemcloud(config: MemcloudClient.Config) {
+        self.memcloudClient = MemcloudClient(config: config)
+    }
+
+    /// Enable Memcloud with API key and optional URL.
+    public func enableMemcloud(apiKey: String, apiURL: String = "https://api.memcloud.dev/v1", userId: String = "default") {
+        let config = MemcloudClient.Config(apiURL: apiURL, apiKey: apiKey, userId: userId, agentId: "tilly")
+        self.memcloudClient = MemcloudClient(config: config)
+    }
+
+    /// Check if Memcloud sync is enabled and reachable.
+    public var isMemcloudEnabled: Bool { memcloudClient != nil }
 
     // MARK: - CRUD
 
@@ -51,6 +70,13 @@ public final class MemoryService: @unchecked Sendable {
         let fileContent = serializeEntry(entry)
         try fileContent.write(to: filePath, atomically: true, encoding: .utf8)
         try rebuildIndex()
+
+        // Background sync to Memcloud (non-blocking)
+        if let client = memcloudClient {
+            Task.detached { [entry] in
+                _ = try? await client.syncEntry(entry)
+            }
+        }
 
         return entry
     }

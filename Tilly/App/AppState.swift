@@ -87,7 +87,7 @@ final class AppState {
     private let coreToolNames: Set<String> = [
         "execute_command", "read_file", "write_file", "edit_file", "list_directory",
         "web_search", "web_fetch", "http_request", "git",
-        "memory_store", "memory_search", "skill_run", "ask_user",
+        "memory_store", "memory_search", "memcloud_recall", "skill_run", "ask_user",
         "scratchpad_write", "scratchpad_read", "delegate_task",
     ]
 
@@ -316,6 +316,7 @@ final class AppState {
         if allowedNames.contains("scratchpad_read") { subTools.append(ScratchpadReadTool(service: scratchpadService)) }
         if allowedNames.contains("memory_store") { subTools.append(MemoryStoreTool(service: memoryService)) }
         if allowedNames.contains("memory_search") { subTools.append(MemorySearchTool(service: memoryService)) }
+        if allowedNames.contains("memcloud_recall") { subTools.append(MemcloudRecallTool(service: memoryService)) }
 
         let subPrompt = """
         You are a focused sub-agent with the role: \(role).
@@ -1255,9 +1256,10 @@ final class AppState {
         **Scratchpad** (session working memory):
         \(scratchpad.isEmpty ? "(empty)" : scratchpad)
 
-        **Memory** (\(memoryCount) total — use memory_search for more):
+        **Memory** (\(memoryCount) local — use memory_search for local, memcloud_recall for cloud):
         \(recentMemories.isEmpty ? "(none)" : recentMemories)
         Save memories AUTOMATICALLY: user prefs → user, feedback → feedback, project details → project, URLs → reference.
+        \(memoryService.isMemcloudEnabled ? "☁️ Memcloud sync ACTIVE — memories auto-sync to cloud. Use memcloud_recall for rich context retrieval." : "")
 
         **Skills** (\(skillCount) total — use skill_list for more):
         \(recentSkills.isEmpty ? "(none)" : recentSkills)
