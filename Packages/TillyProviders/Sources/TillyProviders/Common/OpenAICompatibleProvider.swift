@@ -21,7 +21,8 @@ open class OpenAICompatibleProvider: @unchecked Sendable, LLMProvider {
         self.keychain = keychain
 
         let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = configuration.timeoutSeconds
+        config.timeoutIntervalForRequest = 300  // 5 min between data chunks (streaming can be slow)
+        config.timeoutIntervalForResource = 900  // 15 min total for the entire response
         config.httpAdditionalHeaders = ["Content-Type": "application/json"]
         self.session = URLSession(configuration: config)
     }

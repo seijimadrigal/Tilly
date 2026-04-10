@@ -352,6 +352,7 @@ final class AppState {
             try await runAgentLoop(session: &session, provider: provider)
         } catch {
             if !(error is CancellationError) {
+                DiagnosticLogger.shared.error("Agent loop error: \(error.localizedDescription)", detail: String(describing: error))
                 let errorMessage = Message(
                     role: .assistant,
                     content: [.text("Error: \(error.localizedDescription)")]
@@ -399,6 +400,12 @@ final class AppState {
             let chatMessages = buildChatMessages(from: session)
             let tools = toolsEnabled ? toolRegistry.definitions : nil
 
+            DiagnosticLogger.shared.llmRequest(
+                model: selectedModelID,
+                messageCount: chatMessages.count,
+                toolCount: tools?.count ?? 0
+            )
+
             let request = ChatCompletionRequest(
                 model: selectedModelID,
                 messages: chatMessages,
@@ -412,8 +419,16 @@ final class AppState {
                 session: &session
             )
 
+            DiagnosticLogger.shared.llmResponse(
+                model: selectedModelID,
+                tokens: result.usage?.totalTokens,
+                latency: result.latencyMs,
+                finishReason: result.finishReason
+            )
+
             if !result.toolCalls.isEmpty {
-                // Execute all tool calls in parallel
+                DiagnosticLogger.shared.log(.agent, "\(result.toolCalls.count) tool calls to execute")
+
                 let toolCalls = result.toolCalls
                 let registry = toolRegistry
 
@@ -423,11 +438,24 @@ final class AppState {
                 ) { group in
                     for tc in toolCalls {
                         group.addTask {
+                            let start = Date()
                             let result: ToolResult
                             do {
                                 result = try await registry.execute(toolCall: tc)
                             } catch {
-                                result = ToolResult(content: "Tool error: \(error.localizedDescription)", isError: true)
+                                let errResult = ToolResult(content: "Tool error: \(error.localizedDescription)", isError: true)
+                                await DiagnosticLogger.shared.error("Tool \(tc.function.name) threw: \(error.localizedDescription)")
+                                return (tc, errResult)
+                            }
+                            let duration = Date().timeIntervalSince(start)
+                            await DiagnosticLogger.shared.toolCall(
+                                name: tc.function.name,
+                                args: tc.function.arguments,
+                                duration: duration,
+                                resultSize: result.content.count
+                            )
+                            if result.isError {
+                                await DiagnosticLogger.shared.error("Tool \(tc.function.name) returned error", detail: String(result.content.prefix(300)))
                             }
                             return (tc, result)
                         }
@@ -574,10 +602,14 @@ final class AppState {
         session.messages[assistantIndex] = assistantMessage
         updateCurrentSession(session)
 
+        let latency = Int(Date().timeIntervalSince(startTime) * 1000)
+
         return StreamResult(
             text: accumulatedText,
             toolCalls: toolCalls,
-            finishReason: finishReason
+            finishReason: finishReason,
+            usage: usage,
+            latencyMs: latency
         )
     }
 
@@ -762,6 +794,8 @@ final class AppState {
         let text: String
         let toolCalls: [ToolCall]
         let finishReason: String?
+        let usage: StreamDelta.Usage?
+        let latencyMs: Int?
     }
 
     // MARK: - Dynamic System Prompt

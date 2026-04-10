@@ -15,7 +15,7 @@ public struct ChatCompletionRequest: Encodable, Sendable {
         model: String,
         messages: [ChatMessage],
         temperature: Double? = nil,
-        maxTokens: Int? = 4096,
+        maxTokens: Int? = 16384,
         topP: Double? = nil,
         stream: Bool = true,
         streamOptions: StreamOptions? = StreamOptions(),
