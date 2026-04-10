@@ -87,7 +87,8 @@ final class AppState {
     private let coreToolNames: Set<String> = [
         "execute_command", "read_file", "write_file", "edit_file", "list_directory",
         "web_search", "web_fetch", "http_request", "git",
-        "memory_store", "memory_search", "memcloud_recall", "skill_run", "ask_user",
+        "memory_store", "memory_search", "memory_list", "memory_delete",
+        "memcloud_recall", "skill_run", "ask_user",
         "scratchpad_write", "scratchpad_read", "delegate_task",
     ]
 
@@ -1257,7 +1258,7 @@ final class AppState {
 
         **System info**: User "\(userName)", home directory: \(homeDir). ALWAYS use this path for Desktop, Documents, etc. — NEVER guess the username.
 
-        You have \(toolRegistry.definitions.count) tools (see tool definitions). Key ones: execute_command, read/write/edit_file, web_search, web_fetch, http_request, git, browser, screenshot, clipboard, memory_store/search, skill_run/chain/test/plan, delegate_task, ask_user, scratchpad_write/read, plan_task.
+        You have \(toolRegistry.definitions.count) tools (see tool definitions). Key ones: execute_command, read/write/edit_file, web_search, web_fetch, http_request, git, browser, screenshot, clipboard, memory_store/search/list/delete, memcloud_recall, skill_run/chain/test/plan, delegate_task, ask_user, scratchpad_write/read, plan_task.
 
         Set timeout on execute_command: 10 quick, 60 normal, 300 builds, 600 large, 900 docker.
         Large tool results are auto-saved to /tmp/tilly-tool-*.txt — use read_file to access full output.

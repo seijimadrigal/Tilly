@@ -200,7 +200,11 @@ public final class MemoryService: @unchecked Sendable {
     private func ensureDirectoryExists() {
         let fm = FileManager.default
         if !fm.fileExists(atPath: memoryDirectory.path) {
-            try? fm.createDirectory(at: memoryDirectory, withIntermediateDirectories: true)
+            do {
+                try fm.createDirectory(at: memoryDirectory, withIntermediateDirectories: true)
+            } catch {
+                print("[MemoryService] ERROR: Failed to create memory directory at \(memoryDirectory.path): \(error.localizedDescription)")
+            }
         }
     }
 
