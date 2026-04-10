@@ -11,6 +11,9 @@ public final class ToolRegistry: @unchecked Sendable {
     /// The delegate_task tool instance, exposed so AppState can set its handler.
     public private(set) var delegateTaskTool: DelegateTaskTool?
 
+    /// The keychain tool instance, exposed so AppState can set its approval handler.
+    public private(set) var keychainPasswordTool: KeychainPasswordTool?
+
     public init() {}
 
     public func register(_ tool: any ToolExecutable) {
@@ -75,6 +78,11 @@ public final class ToolRegistry: @unchecked Sendable {
         registry.register(AudioTool())
         registry.register(MCPClientTool())
         registry.register(CreateToolTool())
+
+        // Keychain password manager
+        let keychainPassword = KeychainPasswordTool()
+        registry.register(keychainPassword)
+        registry.keychainPasswordTool = keychainPassword
 
         // User interaction
         let askUser = AskUserTool()

@@ -63,6 +63,7 @@ final class AppState {
         )
         setupAskUserHandler()
         setupDelegateTaskHandler()
+        setupKeychainHandler()
         setupFirebaseRelay()
         initializeProviders()
         loadSessions()
@@ -115,6 +116,14 @@ final class AppState {
     }
 
     // MARK: - Sub-Agent Delegation
+
+    private func setupKeychainHandler() {
+        // Reuse the ask_user approval flow for keychain access
+        toolRegistry.keychainPasswordTool?.approvalHandler = { [weak self] question, options in
+            guard let self else { return "Denied" }
+            return await self.showAskUserPopup(question: question, options: options)
+        }
+    }
 
     private func setupDelegateTaskHandler() {
         toolRegistry.delegateTaskTool?.handler = { [weak self] task, role, allowedTools, maxRounds in
@@ -377,6 +386,7 @@ final class AppState {
 
         for round in 0..<maxToolRounds {
             agentRound = round + 1
+            DiagnosticLogger.shared.agentRound(round + 1, maxRounds: maxToolRounds)
 
             // Checkpoint every 10 rounds
             if round > 0 && round % 10 == 0 {

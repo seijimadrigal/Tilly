@@ -27,6 +27,12 @@ struct ContentView: View {
             AskUserDialogView()
                 .environment(appState)
         }
+        .sheet(isPresented: Binding(
+            get: { DiagnosticLogger.shared.showLogViewer },
+            set: { DiagnosticLogger.shared.showLogViewer = $0 }
+        )) {
+            LogViewerView()
+        }
     }
 }
 
