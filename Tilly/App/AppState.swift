@@ -37,6 +37,14 @@ final class AppState {
     var toolsEnabled: Bool = true
     private let maxToolRounds = 50
 
+    /// Core tools always sent to LLM. Extended tools omitted when context is large.
+    private let coreToolNames: Set<String> = [
+        "execute_command", "read_file", "write_file", "edit_file", "list_directory",
+        "web_search", "web_fetch", "http_request", "git",
+        "memory_store", "memory_search", "skill_run", "ask_user",
+        "scratchpad_write", "scratchpad_read", "delegate_task",
+    ]
+
     // MARK: - Progress Visibility
     var agentRound: Int = 0
     var currentToolName: String?
@@ -503,7 +511,20 @@ final class AppState {
             }
 
             let chatMessages = buildChatMessages(from: session)
-            let tools = toolsEnabled ? toolRegistry.definitions : nil
+
+            // Smart tool selection: send fewer tools when context is large
+            let tools: [ToolDefinition]?
+            if toolsEnabled {
+                let estimatedTokens = chatMessages.reduce(0) { $0 + ($1.content?.count ?? 0) } / 4
+                if estimatedTokens > 40_000 {
+                    // Context is large — send only core tools to save space
+                    tools = toolRegistry.definitions.filter { coreToolNames.contains($0.function.name) }
+                } else {
+                    tools = toolRegistry.definitions
+                }
+            } else {
+                tools = nil
+            }
 
             DiagnosticLogger.shared.llmRequest(
                 model: selectedModelID,

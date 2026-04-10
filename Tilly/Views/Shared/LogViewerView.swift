@@ -12,12 +12,7 @@ struct LogViewerView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Button {
-                    dismiss()
-                    Task { @MainActor in
-                        DiagnosticLogger.shared.showLogViewer = false
-                    }
-                } label: {
+                Button { dismiss() } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title2)
                         .foregroundStyle(.secondary)

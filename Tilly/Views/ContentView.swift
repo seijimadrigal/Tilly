@@ -3,6 +3,7 @@ import TillyCore
 
 struct ContentView: View {
     @Environment(AppState.self) private var appState
+    @State private var showDiagnosticLog = false
 
     var body: some View {
         NavigationSplitView {
@@ -27,11 +28,18 @@ struct ContentView: View {
             AskUserDialogView()
                 .environment(appState)
         }
-        .sheet(isPresented: Binding(
-            get: { DiagnosticLogger.shared.showLogViewer },
-            set: { DiagnosticLogger.shared.showLogViewer = $0 }
-        )) {
+        .sheet(isPresented: $showDiagnosticLog) {
             LogViewerView()
+        }
+        .onChange(of: showDiagnosticLog) {
+            Task { @MainActor in
+                DiagnosticLogger.shared.showLogViewer = showDiagnosticLog
+            }
+        }
+        .onReceive(Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()) { _ in
+            if DiagnosticLogger.shared.showLogViewer != showDiagnosticLog {
+                showDiagnosticLog = DiagnosticLogger.shared.showLogViewer
+            }
         }
     }
 }
