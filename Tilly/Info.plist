@@ -15,27 +15,8 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.1.0</string>
+	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
-	<key>LSApplicationCategoryType</key>
-	<string>public.app-category.developer-tools</string>
-	<key>NSScreenCaptureUsageDescription</key>
-	<string>Tilly needs screen capture access to take screenshots for visual analysis and UI automation.</string>
-	<key>NSAppleEventsUsageDescription</key>
-	<string>Tilly needs Apple Events access to control Safari and other applications.</string>
-	<key>NSAccessibilityUsageDescription</key>
-	<string>Tilly needs accessibility access to read window positions for screenshots and UI automation.</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.googleusercontent.apps.664391781685-auqfao61ajkmd0m16hkv2htn0rle1u82</string>
-			</array>
-			<key>CFBundleURLName</key>
-			<string>Google Sign-In</string>
-		</dict>
-	</array>
 </dict>
 </plist>

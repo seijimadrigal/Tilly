@@ -368,6 +368,7 @@ struct ToolOperationsBlock: View {
         case "scratchpad_write": return "Notes"
         case "ask_user": return "Ask"
         case "delegate_task": return "Sub-Agent"
+        case "memcloud_recall": return "Cloud Memory"
         default: return name.replacingOccurrences(of: "_", with: " ").capitalized
         }
     }
@@ -480,6 +481,7 @@ struct NestedToolCallRow: View {
         case "plan_task": return "checklist"
         case "ask_user": return "questionmark.circle"
         case "delegate_task": return "person.2"
+        case "memcloud_recall": return "cloud.fill"
         default: return "wrench"
         }
     }

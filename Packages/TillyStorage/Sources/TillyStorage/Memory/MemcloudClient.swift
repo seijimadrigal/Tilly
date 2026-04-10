@@ -161,7 +161,7 @@ public final class MemcloudClient: @unchecked Sendable {
         body: [String: Any]? = nil
     ) async throws -> T {
         guard let url = URL(string: config.apiURL + path) else {
-            throw TillyError.invalidInput("Invalid Memcloud URL: \(config.apiURL + path)")
+            throw TillyError.apiError("Invalid Memcloud URL: \(config.apiURL + path)")
         }
 
         var request = URLRequest(url: url)
@@ -176,12 +176,12 @@ public final class MemcloudClient: @unchecked Sendable {
         let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw TillyError.networkError("Invalid response from Memcloud")
+            throw TillyError.apiError("Invalid response from Memcloud")
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
-            throw TillyError.networkError("Memcloud API \(httpResponse.statusCode): \(errorBody)")
+            throw TillyError.httpError(statusCode: httpResponse.statusCode, message: "Memcloud: \(errorBody)")
         }
 
         return try JSONDecoder().decode(T.self, from: data)

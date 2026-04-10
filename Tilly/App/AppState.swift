@@ -125,6 +125,15 @@ final class AppState {
         loadSessions()
         restoreProviderSelection()
         authService.restoreSession()
+        setupMemcloud()
+    }
+
+    private func setupMemcloud() {
+        memoryService.enableMemcloud(
+            apiKey: "mc_b98b4767c4f2e1e1b671b5a8b422af7c1f57852a8b855f3d",
+            userId: NSUserName()
+        )
+        DiagnosticLogger.shared.log(.system, "Memcloud sync enabled for user \(NSUserName())")
     }
 
     // MARK: - Provider Selection Persistence
