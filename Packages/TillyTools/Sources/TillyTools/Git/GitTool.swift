@@ -29,6 +29,7 @@ public final class GitTool: ToolExecutable, @unchecked Sendable {
     }
 
     public func execute(arguments: String) async throws -> ToolResult {
+        #if os(macOS)
         struct Args: Decodable { let operation: String; let args: String?; let working_directory: String? }
         guard let data = arguments.data(using: .utf8) else { throw TillyError.toolExecutionFailed("Invalid args") }
         let args = try JSONDecoder().decode(Args.self, from: data)
@@ -76,5 +77,8 @@ public final class GitTool: ToolExecutable, @unchecked Sendable {
         } catch {
             return ToolResult(content: "Git error: \(error.localizedDescription)", isError: true)
         }
+        #else
+        return ToolResult(content: "This tool is only available on macOS.", isError: true)
+        #endif
     }
 }

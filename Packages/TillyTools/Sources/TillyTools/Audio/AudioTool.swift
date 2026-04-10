@@ -26,6 +26,7 @@ public final class AudioTool: ToolExecutable, @unchecked Sendable {
     }
 
     public func execute(arguments: String) async throws -> ToolResult {
+        #if os(macOS)
         struct Args: Decodable { let action: String; let text: String?; let voice: String?; let path: String?; let rate: Int? }
         guard let data = arguments.data(using: .utf8) else { throw TillyError.toolExecutionFailed("Invalid args") }
         let args = try JSONDecoder().decode(Args.self, from: data)
@@ -74,5 +75,8 @@ public final class AudioTool: ToolExecutable, @unchecked Sendable {
         default:
             return ToolResult(content: "Unknown action: \(args.action)", isError: true)
         }
+        #else
+        return ToolResult(content: "This tool is only available on macOS.", isError: true)
+        #endif
     }
 }

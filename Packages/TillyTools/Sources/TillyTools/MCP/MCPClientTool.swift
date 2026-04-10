@@ -27,6 +27,7 @@ public final class MCPClientTool: ToolExecutable, @unchecked Sendable {
     }
 
     public func execute(arguments: String) async throws -> ToolResult {
+        #if os(macOS)
         struct Args: Decodable {
             let action: String
             let server_command: String
@@ -52,8 +53,12 @@ public final class MCPClientTool: ToolExecutable, @unchecked Sendable {
         default:
             return ToolResult(content: "Unknown action: \(args.action)", isError: true)
         }
+        #else
+        return ToolResult(content: "This tool is only available on macOS.", isError: true)
+        #endif
     }
 
+    #if os(macOS)
     /// List tools available on an MCP server
     private func listTools(serverCommand: String) async -> ToolResult {
         let request = """
@@ -141,4 +146,5 @@ public final class MCPClientTool: ToolExecutable, @unchecked Sendable {
             return "MCP error: \(error.localizedDescription)"
         }
     }
+    #endif  // os(macOS)
 }

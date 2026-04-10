@@ -21,6 +21,7 @@ public final class ScreenshotTool: ToolExecutable, @unchecked Sendable {
     }
 
     public func execute(arguments: String) async throws -> ToolResult {
+        #if os(macOS)
         struct Args: Decodable { let path: String? }
         guard let data = arguments.data(using: .utf8) else { throw TillyError.toolExecutionFailed("Invalid args") }
         let args = try JSONDecoder().decode(Args.self, from: data)
@@ -41,9 +42,9 @@ public final class ScreenshotTool: ToolExecutable, @unchecked Sendable {
             )
         }
 
-        return ToolResult(
-            content: "Screenshot failed — grant Screen Recording: System Settings → Privacy & Security → Screen Recording → enable Tilly, then restart.",
-            isError: true
-        )
+        return ToolResult(content: "Screenshot failed — grant Screen Recording in System Settings → Privacy & Security.", isError: true)
+        #else
+        return ToolResult(content: "Screenshot is only available on macOS.", isError: true)
+        #endif
     }
 }

@@ -61,6 +61,7 @@ public final class ShellExecutor: ToolExecutable, @unchecked Sendable {
     }
 
     public func execute(arguments: String) async throws -> ToolResult {
+        #if os(macOS)
         struct Args: Decodable {
             let command: String
             let working_directory: String?
@@ -98,8 +99,12 @@ public final class ShellExecutor: ToolExecutable, @unchecked Sendable {
             workingDirectory: args.working_directory,
             timeout: timeout
         )
+        #else
+        return ToolResult(content: "This tool is only available on macOS.", isError: true)
+        #endif
     }
 
+    #if os(macOS)
     // MARK: - Dynamic Timeout Resolution
 
     /// Resolve timeout based on command type. User's explicit timeout always wins.
@@ -219,4 +224,5 @@ public final class ShellExecutor: ToolExecutable, @unchecked Sendable {
             isError: exitCode != 0
         )
     }
+    #endif  // os(macOS)
 }

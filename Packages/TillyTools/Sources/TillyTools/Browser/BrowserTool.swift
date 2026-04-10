@@ -34,6 +34,7 @@ public final class BrowserTool: ToolExecutable, @unchecked Sendable {
     }
 
     public func execute(arguments: String) async throws -> ToolResult {
+        #if os(macOS)
         struct Args: Decodable {
             let action: String
             let url: String?
@@ -140,8 +141,12 @@ public final class BrowserTool: ToolExecutable, @unchecked Sendable {
         default:
             return ToolResult(content: "Unknown action: \(args.action)", isError: true)
         }
+        #else
+        return ToolResult(content: "This tool is only available on macOS.", isError: true)
+        #endif
     }
 
+    #if os(macOS)
     private func runAppleScript(_ script: String) async -> ToolResult {
         let process = Process()
         let stdoutPipe = Pipe()
@@ -176,4 +181,6 @@ public final class BrowserTool: ToolExecutable, @unchecked Sendable {
             .replacingOccurrences(of: "\"", with: "\\\"")
             .replacingOccurrences(of: "'", with: "\\'")
     }
+    #endif  // os(macOS)
 }
+
