@@ -1019,6 +1019,12 @@ final class AppState {
         **Skills** (\(skillCount) total — use skill_list for more):
         \(recentSkills.isEmpty ? "(none)" : recentSkills)
 
+        **Documents & Reports**: When generating reports, analyses, or documents:
+        1. ALWAYS use write_file to save the document to the user's Desktop (~/Desktop/) as .md, .txt, .html, or .pdf
+        2. Tell the user where the file was saved so they can open it
+        3. For short responses (under 500 words), write inline. For longer content, ALWAYS save to a file.
+        4. Use open_application to open the file after saving if appropriate.
+
         **Rules**: Plan before 3+ tool calls. Be proactive. Use scratchpad. Save memories. Ask when unsure. Read before editing. No destructive commands without confirmation. After multi-step tasks, save reusable workflows as skills.
         """
     }
