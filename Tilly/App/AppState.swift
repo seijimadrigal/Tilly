@@ -707,8 +707,6 @@ final class AppState {
         session.messages[assistantIndex] = assistantMessage
         updateCurrentSession(session)
 
-        let latency = Int(Date().timeIntervalSince(startTime) * 1000)
-
         return StreamResult(
             text: accumulatedText,
             toolCalls: toolCalls,
