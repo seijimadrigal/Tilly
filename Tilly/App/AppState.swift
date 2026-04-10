@@ -925,7 +925,7 @@ final class AppState {
                                 userContent += "\n```\n\(truncated)\n```"
                             }
                         }
-                    case .text:
+                    case .text, .thinking:
                         break
                     }
                 }
