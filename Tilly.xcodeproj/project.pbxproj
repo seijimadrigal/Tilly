@@ -17,11 +17,13 @@
 		35953C20FEBE657284212099 /* TillyTools in Frameworks */ = {isa = PBXBuildFile; productRef = 4549431E15F91AEBCB52AA51 /* TillyTools */; };
 		425916D524D5EBD17B859F90 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = D6DBE6A558498254AABC3C73 /* GoogleService-Info.plist */; };
 		4397EEF8ADF15BB331027A47 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7539F33A7EFEFEF5758F954 /* SidebarView.swift */; };
+		43E113F131D0EC239F90CD41 /* DiagnosticLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DD3E91100BA3493C4790C5A /* DiagnosticLogger.swift */; };
 		4F39B182E9BC9F51D0F87387 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 800096BCD889E9FC5045AFC2 /* GoogleSignIn */; };
 		50A406395CF1EDD23D21F168 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B2F3390EB981E65499E8770 /* SettingsView.swift */; };
 		52F39663C346816AAE5B5E55 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C151A060A75E2FAF23B86943 /* SignInView.swift */; };
 		5A10D82BFAD30352F6170C9A /* TillyCore in Frameworks */ = {isa = PBXBuildFile; productRef = B64A66864A186E577D58E430 /* TillyCore */; };
 		61A93D2DBF8252EEB722A12F /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4960611D38330D558F611FE8 /* SignInView.swift */; };
+		69333B0CB6EAA2F06DCFFB38 /* LogViewerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4FFA69597E54395FA6AB7BA /* LogViewerView.swift */; };
 		6AAE6F89D9A28BAF3878ABC0 /* TillyStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 41D604BDF3CE4BE6C9C398C8 /* TillyStorage */; };
 		6AF164B05D1390D2E88BB423 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 55B44A26794936896895EE78 /* GoogleSignIn */; };
 		71C0DB8586416C453E61DC1C /* RemoteMacStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2747F1D17580BBF46EF32268 /* RemoteMacStatusView.swift */; };
@@ -60,6 +62,7 @@
 		3C5ED9A99FF27D0D2869F82C /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		480176AEFE0E2CE531D0FE75 /* RemoteContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteContentView.swift; sourceTree = "<group>"; };
 		4960611D38330D558F611FE8 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
+		4DD3E91100BA3493C4790C5A /* DiagnosticLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticLogger.swift; sourceTree = "<group>"; };
 		60CA60FD3AA2EF8AD6FC963A /* FirebaseRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseRelay.swift; sourceTree = "<group>"; };
 		627C01D94D3C5900E57F857D /* TillyRemoteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TillyRemoteApp.swift; sourceTree = "<group>"; };
 		69477CA7E4BAA8FB7123141D /* SkillBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillBrowserView.swift; sourceTree = "<group>"; };
@@ -79,6 +82,7 @@
 		C73A81C3E2D23BD40FC10966 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		D574CAEF69385E8BFF9B7F45 /* Tilly.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tilly.entitlements; sourceTree = "<group>"; };
 		D6DBE6A558498254AABC3C73 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		E4FFA69597E54395FA6AB7BA /* LogViewerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogViewerView.swift; sourceTree = "<group>"; };
 		EFCDF4FAD0857382E309F2E1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F7714F7D37E3C1AE987EAE62 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -117,6 +121,7 @@
 		067CCE66465E6AFF919456B7 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				E4FFA69597E54395FA6AB7BA /* LogViewerView.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -317,6 +322,7 @@
 				66EBD13FA996530F16905E10 /* Session */,
 				845897DD893C6178D3BA7E4C /* Tool */,
 				3911FCF3D620AFFCE1F39BA6 /* AuthService.swift */,
+				4DD3E91100BA3493C4790C5A /* DiagnosticLogger.swift */,
 				1C3DBBEFA221356A5859B0D8 /* FirebaseRelay.swift */,
 			);
 			path = Services;
@@ -482,8 +488,10 @@
 				9ED5B3A300C8CFB39F05946B /* AuthService.swift in Sources */,
 				CC717D363813E811C3EA95C9 /* ChatView.swift in Sources */,
 				C9A5EA6E59400D999D4688A4 /* ContentView.swift in Sources */,
+				43E113F131D0EC239F90CD41 /* DiagnosticLogger.swift in Sources */,
 				77162C6968EA9D5587652479 /* FirebaseRelay.swift in Sources */,
 				ED6F4EBC715D9F5721BC5E4E /* InputBarView.swift in Sources */,
+				69333B0CB6EAA2F06DCFFB38 /* LogViewerView.swift in Sources */,
 				992B4093B0D0631990EBD38E /* MemoryBrowserView.swift in Sources */,
 				18634CDFD62DBD5A4571B6DD /* MessageContentView.swift in Sources */,
 				FED2CB3442AE8B004678DCE4 /* MessageView.swift in Sources */,

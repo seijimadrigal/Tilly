@@ -21,7 +21,9 @@ struct AppCommands: Commands {
 
         CommandMenu("Debug") {
             Button("Show Diagnostic Log") {
-                DiagnosticLogger.shared.showLogViewer.toggle()
+                Task { @MainActor in
+                    DiagnosticLogger.shared.showLogViewer.toggle()
+                }
             }
             .keyboardShortcut("l", modifiers: [.command, .shift])
         }
