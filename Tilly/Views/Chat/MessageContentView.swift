@@ -39,7 +39,6 @@ struct RichTextView: View {
             ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
                 switch segment {
                 case .text(let content):
-                    // Use SwiftUI's built-in markdown rendering
                     Text(LocalizedStringKey(content))
                         .font(.body)
                         .lineSpacing(4)
@@ -54,6 +53,9 @@ struct RichTextView: View {
                         .font(fontForHeading(level))
                         .fontWeight(.bold)
                         .padding(.top, level == 1 ? 8 : 4)
+
+                case .table(let headers, let rows):
+                    MarkdownTableView(headers: headers, rows: rows)
                 }
             }
         }
@@ -72,6 +74,7 @@ struct RichTextView: View {
 
     private enum TextSegment {
         case text(String)
+        case table(headers: [String], rows: [[String]])
         case codeBlock(language: String, code: String)
         case heading(level: Int, content: String)
     }
@@ -116,29 +119,64 @@ struct RichTextView: View {
     private func parseTextAndHeadings(_ text: String) -> [TextSegment] {
         var segments: [TextSegment] = []
         var currentText = ""
+        var tableLines: [String] = []
+        var inTable = false
 
-        for line in text.components(separatedBy: "\n") {
-            if line.hasPrefix("### ") {
+        let lines = text.components(separatedBy: "\n")
+
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+
+            // Detect table rows (lines starting and ending with |)
+            if trimmed.hasPrefix("|") && trimmed.hasSuffix("|") {
+                if !inTable {
+                    // Flush accumulated text
+                    if !currentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        segments.append(.text(currentText.trimmingCharacters(in: .whitespacesAndNewlines)))
+                        currentText = ""
+                    }
+                    inTable = true
+                }
+                tableLines.append(trimmed)
+                continue
+            }
+
+            // If we were in a table and hit a non-table line, flush the table
+            if inTable {
+                if let table = parseTable(tableLines) {
+                    segments.append(.table(headers: table.headers, rows: table.rows))
+                }
+                tableLines = []
+                inTable = false
+            }
+
+            // Normal line parsing
+            if trimmed.hasPrefix("### ") {
                 if !currentText.isEmpty {
                     segments.append(.text(currentText.trimmingCharacters(in: .whitespacesAndNewlines)))
                     currentText = ""
                 }
-                segments.append(.heading(level: 3, content: String(line.dropFirst(4))))
-            } else if line.hasPrefix("## ") {
+                segments.append(.heading(level: 3, content: String(trimmed.dropFirst(4))))
+            } else if trimmed.hasPrefix("## ") {
                 if !currentText.isEmpty {
                     segments.append(.text(currentText.trimmingCharacters(in: .whitespacesAndNewlines)))
                     currentText = ""
                 }
-                segments.append(.heading(level: 2, content: String(line.dropFirst(3))))
-            } else if line.hasPrefix("# ") {
+                segments.append(.heading(level: 2, content: String(trimmed.dropFirst(3))))
+            } else if trimmed.hasPrefix("# ") {
                 if !currentText.isEmpty {
                     segments.append(.text(currentText.trimmingCharacters(in: .whitespacesAndNewlines)))
                     currentText = ""
                 }
-                segments.append(.heading(level: 1, content: String(line.dropFirst(2))))
+                segments.append(.heading(level: 1, content: String(trimmed.dropFirst(2))))
             } else {
                 currentText += (currentText.isEmpty ? "" : "\n") + line
             }
+        }
+
+        // Flush remaining table
+        if inTable, let table = parseTable(tableLines) {
+            segments.append(.table(headers: table.headers, rows: table.rows))
         }
 
         if !currentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -146,6 +184,89 @@ struct RichTextView: View {
         }
 
         return segments
+    }
+
+    /// Parse markdown table lines into headers + rows
+    private func parseTable(_ lines: [String]) -> (headers: [String], rows: [[String]])? {
+        guard lines.count >= 2 else { return nil }
+
+        func parseCells(_ line: String) -> [String] {
+            line.split(separator: "|", omittingEmptySubsequences: false)
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+        }
+
+        let headers = parseCells(lines[0])
+        guard !headers.isEmpty else { return nil }
+
+        // Skip separator line (|---|---|---|)
+        let dataStartIndex = lines.count > 1 && lines[1].contains("-") ? 2 : 1
+
+        var rows: [[String]] = []
+        for i in dataStartIndex..<lines.count {
+            let cells = parseCells(lines[i])
+            if !cells.isEmpty {
+                rows.append(cells)
+            }
+        }
+
+        return (headers, rows)
+    }
+}
+
+// MARK: - Markdown Table View
+
+struct MarkdownTableView: View {
+    let headers: [String]
+    let rows: [[String]]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header row
+            HStack(spacing: 0) {
+                ForEach(Array(headers.enumerated()), id: \.offset) { i, header in
+                    Text(header)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if i < headers.count - 1 {
+                        Divider()
+                    }
+                }
+            }
+            .background(Color(.controlBackgroundColor).opacity(0.6))
+
+            Divider()
+
+            // Data rows
+            ForEach(Array(rows.enumerated()), id: \.offset) { rowIndex, row in
+                HStack(spacing: 0) {
+                    ForEach(Array(row.prefix(headers.count).enumerated()), id: \.offset) { i, cell in
+                        Text(cell)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        if i < headers.count - 1 {
+                            Divider()
+                        }
+                    }
+                }
+
+                if rowIndex < rows.count - 1 {
+                    Divider()
+                }
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+        )
     }
 }
 
