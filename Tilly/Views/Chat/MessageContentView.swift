@@ -282,6 +282,7 @@ struct ThinkingDropdown: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            // Header — always visible
             Button {
                 withAnimation(.easeInOut(duration: 0.15)) { isExpanded.toggle() }
             } label: {
@@ -296,10 +297,6 @@ struct ThinkingDropdown: View {
 
                     Text("Thinking")
                         .font(.caption.weight(.medium))
-                        .foregroundStyle(.primary)
-
-                    Text("(\(text.count) chars)")
-                        .font(.caption)
                         .foregroundStyle(.secondary)
 
                     Spacer()
@@ -313,6 +310,17 @@ struct ThinkingDropdown: View {
             }
             .buttonStyle(.plain)
 
+            // Preview — always visible, faded (2 lines max)
+            if !isExpanded {
+                Text(text)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(2)
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 6)
+            }
+
+            // Full text — shown when expanded
             if isExpanded {
                 Text(text)
                     .font(.system(size: 12))

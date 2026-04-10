@@ -1089,11 +1089,12 @@ final class AppState {
         **Skills** (\(skillCount) total — use skill_list for more):
         \(recentSkills.isEmpty ? "(none)" : recentSkills)
 
-        **Documents & Reports**: When generating reports, analyses, or documents:
-        1. ALWAYS use write_file to save the document to the user's Desktop (~/Desktop/) as .md, .txt, .html, or .pdf
-        2. Tell the user where the file was saved — it will appear inline in the chat for preview
-        3. For short responses (under 500 words), write inline. For longer content, ALWAYS save to a file.
-        4. Do NOT use open_application to open the file — the user can preview it directly in the chat.
+        **Documents & Reports**: When generating reports, analyses, or any document:
+        1. ALWAYS use write_file to save to ~/Desktop/ as .md, .txt, .html, or .pdf
+        2. The file will AUTOMATICALLY appear as an embedded preview in the chat — the user can view it right there
+        3. NEVER use open_application to open documents. NEVER just describe the content in text. ALWAYS save as a file.
+        4. Even for "show me" or "preview" requests — save as file first, it embeds automatically.
+        5. For content over 200 words, ALWAYS save to a file instead of writing inline.
 
         **Rules**: Plan before 3+ tool calls. Be proactive. Use scratchpad. Save memories. Ask when unsure. Read before editing. No destructive commands without confirmation. After multi-step tasks, save reusable workflows as skills.
         """
