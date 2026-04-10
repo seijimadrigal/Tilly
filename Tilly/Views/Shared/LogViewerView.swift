@@ -1,22 +1,21 @@
 import SwiftUI
 
 /// Hidden diagnostic log viewer — accessible via Cmd+Shift+L.
-/// Shows all tool calls, LLM requests, errors, and timing data.
 struct LogViewerView: View {
-    @State private var logger = DiagnosticLogger.shared
+    @State private var entries: [DiagnosticLogger.LogEntry] = []
     @State private var filterCategory: DiagnosticLogger.LogEntry.Category?
     @State private var searchText = ""
 
+    private let refreshTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
     var body: some View {
         VStack(spacing: 0) {
-            // Toolbar
             HStack {
                 Text("Diagnostic Log")
                     .font(.headline)
 
                 Spacer()
 
-                // Filter
                 Picker("Filter", selection: $filterCategory) {
                     Text("All").tag(nil as DiagnosticLogger.LogEntry.Category?)
                     Text("Tool").tag(DiagnosticLogger.LogEntry.Category.tool as DiagnosticLogger.LogEntry.Category?)
@@ -28,21 +27,30 @@ struct LogViewerView: View {
                 .frame(maxWidth: 300)
 
                 Button {
-                    let log = logger.exportLog()
+                    let log = DiagnosticLogger.shared.exportLog()
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(log, forType: .string)
                 } label: {
-                    Label("Copy Log", systemImage: "doc.on.doc")
+                    Label("Copy", systemImage: "doc.on.doc")
                 }
 
                 Button {
-                    exportToFile()
+                    let log = DiagnosticLogger.shared.exportLog()
+                    let panel = NSSavePanel()
+                    panel.allowedContentTypes = [.plainText]
+                    panel.nameFieldStringValue = "tilly-diagnostic-\(Int(Date().timeIntervalSince1970)).log"
+                    panel.begin { response in
+                        if response == .OK, let url = panel.url {
+                            try? log.write(to: url, atomically: true, encoding: .utf8)
+                        }
+                    }
                 } label: {
                     Label("Export", systemImage: "square.and.arrow.up")
                 }
 
                 Button(role: .destructive) {
-                    logger.clear()
+                    DiagnosticLogger.shared.clear()
+                    entries = []
                 } label: {
                     Label("Clear", systemImage: "trash")
                 }
@@ -52,21 +60,18 @@ struct LogViewerView: View {
 
             Divider()
 
-            // Search
             TextField("Search logs...", text: $searchText)
                 .textFieldStyle(.roundedBorder)
                 .padding(.horizontal)
                 .padding(.vertical, 4)
 
-            // Log entries
             List(filteredEntries) { entry in
                 LogEntryRow(entry: entry)
             }
             .listStyle(.plain)
 
-            // Status bar
             HStack {
-                Text("\(logger.entries.count) entries")
+                Text("\(entries.count) entries")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
                 Spacer()
@@ -78,27 +83,19 @@ struct LogViewerView: View {
             .padding(.vertical, 4)
         }
         .frame(minWidth: 600, minHeight: 400)
+        .onAppear { entries = DiagnosticLogger.shared.entries }
+        .onReceive(refreshTimer) { _ in
+            entries = DiagnosticLogger.shared.entries
+        }
     }
 
     private var filteredEntries: [DiagnosticLogger.LogEntry] {
-        logger.entries.reversed().filter { entry in
+        entries.reversed().filter { entry in
             let matchesCategory = filterCategory == nil || entry.category == filterCategory
             let matchesSearch = searchText.isEmpty ||
                 entry.message.localizedCaseInsensitiveContains(searchText) ||
                 (entry.detail?.localizedCaseInsensitiveContains(searchText) ?? false)
             return matchesCategory && matchesSearch
-        }
-    }
-
-    private func exportToFile() {
-        let log = logger.exportLog()
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.plainText]
-        panel.nameFieldStringValue = "tilly-diagnostic-\(Int(Date().timeIntervalSince1970)).log"
-        panel.begin { response in
-            if response == .OK, let url = panel.url {
-                try? log.write(to: url, atomically: true, encoding: .utf8)
-            }
         }
     }
 }

@@ -549,18 +549,18 @@ final class AppState {
                                 result = try await registry.execute(toolCall: tc)
                             } catch {
                                 let errResult = ToolResult(content: "Tool error: \(error.localizedDescription)", isError: true)
-                                await DiagnosticLogger.shared.error("Tool \(tc.function.name) threw: \(error.localizedDescription)")
+                                DiagnosticLogger.shared.error("Tool \(tc.function.name) threw: \(error.localizedDescription)")
                                 return (tc, errResult)
                             }
                             let duration = Date().timeIntervalSince(start)
-                            await DiagnosticLogger.shared.toolCall(
+                            DiagnosticLogger.shared.toolCall(
                                 name: tc.function.name,
                                 args: tc.function.arguments,
                                 duration: duration,
                                 resultSize: result.content.count
                             )
                             if result.isError {
-                                await DiagnosticLogger.shared.error("Tool \(tc.function.name) returned error", detail: String(result.content.prefix(300)))
+                                DiagnosticLogger.shared.error("Tool \(tc.function.name) returned error", detail: String(result.content.prefix(300)))
                             }
                             return (tc, result)
                         }

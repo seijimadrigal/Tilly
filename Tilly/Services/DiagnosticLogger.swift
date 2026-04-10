@@ -2,31 +2,26 @@ import Foundation
 import SwiftUI
 
 /// Captures diagnostic logs for debugging the agent harness.
-/// Tracks: tool calls, LLM requests, errors, agent rounds, timing.
-/// Accessible via hidden UI (Cmd+Shift+L on Mac).
-@MainActor
-@Observable
-final class DiagnosticLogger {
+/// Thread-safe — can be called from any actor/task.
+/// UI properties accessed via @MainActor.
+final class DiagnosticLogger: @unchecked Sendable {
     static let shared = DiagnosticLogger()
 
-    var entries: [LogEntry] = []
-    var showLogViewer = false
-
+    private let lock = NSLock()
+    private var _entries: [LogEntry] = []
     private let maxEntries = 500
-    private let dateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm:ss.SSS"
-        return f
-    }()
 
-    struct LogEntry: Identifiable {
+    // UI state — only mutated on main actor
+    @MainActor var showLogViewer = false
+
+    struct LogEntry: Identifiable, Sendable {
         let id = UUID()
         let timestamp: Date
         let category: Category
         let message: String
         let detail: String?
 
-        enum Category: String {
+        enum Category: String, Sendable {
             case tool = "TOOL"
             case llm = "LLM"
             case error = "ERROR"
@@ -36,17 +31,27 @@ final class DiagnosticLogger {
         }
     }
 
+    /// Thread-safe read access to entries
+    var entries: [LogEntry] {
+        lock.lock()
+        defer { lock.unlock() }
+        return _entries
+    }
+
+    /// Thread-safe log — can be called from ANY context (main actor, task group, sub-agent, etc.)
     func log(_ category: LogEntry.Category, _ message: String, detail: String? = nil) {
         let entry = LogEntry(timestamp: Date(), category: category, message: message, detail: detail)
-        entries.append(entry)
-        if entries.count > maxEntries {
-            entries.removeFirst(entries.count - maxEntries)
+        lock.lock()
+        _entries.append(entry)
+        if _entries.count > maxEntries {
+            _entries.removeFirst(_entries.count - maxEntries)
         }
-        // Also print to console for Xcode debugging
+        lock.unlock()
+        // Also print to Xcode console
         print("[\(category.rawValue)] \(message)")
     }
 
-    // MARK: - Convenience methods
+    // MARK: - Convenience methods (all thread-safe)
 
     func toolCall(name: String, args: String, duration: TimeInterval? = nil, resultSize: Int? = nil) {
         var msg = "Called: \(name)"
@@ -79,12 +84,16 @@ final class DiagnosticLogger {
     // MARK: - Export
 
     func exportLog() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss.SSS"
+
+        let snapshot = entries  // Thread-safe copy
         var output = "# Tilly Diagnostic Log\n"
         output += "# Exported: \(Date())\n"
-        output += "# Entries: \(entries.count)\n\n"
+        output += "# Entries: \(snapshot.count)\n\n"
 
-        for entry in entries {
-            let time = dateFormatter.string(from: entry.timestamp)
+        for entry in snapshot {
+            let time = formatter.string(from: entry.timestamp)
             output += "[\(time)] [\(entry.category.rawValue)] \(entry.message)\n"
             if let detail = entry.detail {
                 output += "  → \(detail)\n"
@@ -95,6 +104,8 @@ final class DiagnosticLogger {
     }
 
     func clear() {
-        entries.removeAll()
+        lock.lock()
+        _entries.removeAll()
+        lock.unlock()
     }
 }
