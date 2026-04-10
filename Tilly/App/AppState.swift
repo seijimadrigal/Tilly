@@ -628,9 +628,33 @@ final class AppState {
                         currentToolSummary = extractToolSummary(tc)
 
                         let trimmedResult = offloadIfLarge(toolResult, callID: tc.id)
+
+                        // For write_file: embed the file as a FileChipView in the chat
+                        var contentBlocks: [ContentBlock] = [.text(trimmedResult.content)]
+                        if tc.function.name == "write_file",
+                           let argsData = tc.function.arguments.data(using: .utf8),
+                           let argsJson = try? JSONSerialization.jsonObject(with: argsData) as? [String: Any],
+                           let filePath = argsJson["path"] as? String {
+                            let expanded = NSString(string: filePath).expandingTildeInPath
+                            if FileManager.default.fileExists(atPath: expanded) {
+                                let url = URL(fileURLWithPath: expanded)
+                                let size = (try? FileManager.default.attributesOfItem(atPath: expanded)[.size] as? Int64) ?? 0
+                                let ext = url.pathExtension.lowercased()
+                                let mime = ["md": "text/markdown", "txt": "text/plain", "html": "text/html",
+                                            "json": "application/json", "pdf": "application/pdf",
+                                            "swift": "text/x-swift", "py": "text/x-python"][ext] ?? "application/octet-stream"
+                                contentBlocks.append(.fileReference(FileAttachment(
+                                    fileName: url.lastPathComponent,
+                                    filePath: expanded,
+                                    mimeType: mime,
+                                    sizeBytes: size
+                                )))
+                            }
+                        }
+
                         let toolMessage = Message(
                             role: .tool,
-                            content: [.text(trimmedResult.content)],
+                            content: contentBlocks,
                             toolCallID: tc.id
                         )
                         session.appendMessage(toolMessage)
@@ -694,6 +718,7 @@ final class AppState {
         session: inout Session
     ) async throws -> StreamResult {
         var accumulatedText = ""
+        var accumulatedThinking = ""
         var accumulatedToolCalls: [String: AccumulatingToolCall] = [:]
         var usage: StreamDelta.Usage?
         var finishReason: String?
@@ -714,15 +739,23 @@ final class AppState {
 
             if let content = choice.delta.content {
                 accumulatedText += content
-                assistantMessage.content = [.text(accumulatedText)]
+                var blocks: [ContentBlock] = []
+                if !accumulatedThinking.isEmpty { blocks.append(.thinking(accumulatedThinking)) }
+                blocks.append(.text(accumulatedText))
+                assistantMessage.content = blocks
                 session.messages[assistantIndex] = assistantMessage
                 updateCurrentSession(session)
                 onStreamDelta?(content)
             }
 
             if let reasoning = choice.delta.reasoningContent {
-                accumulatedText += reasoning
-                assistantMessage.content = [.text(accumulatedText)]
+                accumulatedThinking += reasoning
+                // Build content blocks: thinking (if any) + text (if any)
+                var blocks: [ContentBlock] = []
+                if !accumulatedThinking.isEmpty { blocks.append(.thinking(accumulatedThinking)) }
+                if !accumulatedText.isEmpty { blocks.append(.text(accumulatedText)) }
+                if blocks.isEmpty { blocks.append(.text("")) }
+                assistantMessage.content = blocks
                 session.messages[assistantIndex] = assistantMessage
                 updateCurrentSession(session)
             }

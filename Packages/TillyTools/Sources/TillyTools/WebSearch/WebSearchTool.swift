@@ -104,7 +104,57 @@ public final class WebSearchTool: ToolExecutable, @unchecked Sendable {
 
             return ToolResult(content: output)
         } catch {
-            return ToolResult(content: "Search failed: \(error.localizedDescription)", isError: true)
+            // Fallback: try DuckDuckGo Instant Answer API (free, no key)
+            print("[WebSearch] Tavily failed, trying DuckDuckGo fallback: \(error.localizedDescription)")
+            return await fallbackDDGSearch(query: args.query, maxResults: maxResults)
+        }
+    }
+
+    /// Fallback: DuckDuckGo Instant Answer API (free, no API key)
+    private func fallbackDDGSearch(query: String, maxResults: Int) async -> ToolResult {
+        let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
+        guard let url = URL(string: "https://api.duckduckgo.com/?q=\(encoded)&format=json&no_html=1&skip_disambig=1") else {
+            return ToolResult(content: "Search failed: invalid query", isError: true)
+        }
+
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 15
+
+        do {
+            let (data, _) = try await URLSession.shared.data(for: request)
+            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                return ToolResult(content: "DuckDuckGo fallback: failed to parse response", isError: true)
+            }
+
+            var output = "Search results for: \(query) (via DuckDuckGo)\n\n"
+
+            // Abstract (instant answer)
+            if let abstract = json["Abstract"] as? String, !abstract.isEmpty {
+                let source = json["AbstractSource"] as? String ?? ""
+                let abstractURL = json["AbstractURL"] as? String ?? ""
+                output += "**Answer:** \(abstract)\n"
+                if !abstractURL.isEmpty { output += "Source: \(source) — \(abstractURL)\n" }
+                output += "\n"
+            }
+
+            // Related topics
+            if let topics = json["RelatedTopics"] as? [[String: Any]] {
+                for (i, topic) in topics.prefix(maxResults).enumerated() {
+                    if let text = topic["Text"] as? String,
+                       let firstURL = topic["FirstURL"] as? String {
+                        output += "\(i + 1). \(String(text.prefix(200)))\n"
+                        output += "   \(firstURL)\n\n"
+                    }
+                }
+            }
+
+            if output == "Search results for: \(query) (via DuckDuckGo)\n\n" {
+                return ToolResult(content: "No results found for: \(query)")
+            }
+
+            return ToolResult(content: output)
+        } catch {
+            return ToolResult(content: "All search engines failed: \(error.localizedDescription)", isError: true)
         }
     }
 }

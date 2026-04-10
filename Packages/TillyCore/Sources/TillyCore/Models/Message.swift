@@ -56,11 +56,12 @@ public struct Message: Identifiable, Codable, Sendable, Equatable {
 
 public enum ContentBlock: Codable, Sendable, Equatable {
     case text(String)
+    case thinking(String)
     case image(data: Data, mimeType: String)
     case fileReference(FileAttachment)
 
     private enum CodingKeys: String, CodingKey {
-        case type, text, data, mimeType, file
+        case type, text, thinking, data, mimeType, file
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -69,6 +70,9 @@ public enum ContentBlock: Codable, Sendable, Equatable {
         case .text(let text):
             try container.encode("text", forKey: .type)
             try container.encode(text, forKey: .text)
+        case .thinking(let text):
+            try container.encode("thinking", forKey: .type)
+            try container.encode(text, forKey: .thinking)
         case .image(let data, let mimeType):
             try container.encode("image", forKey: .type)
             try container.encode(data, forKey: .data)
@@ -85,6 +89,8 @@ public enum ContentBlock: Codable, Sendable, Equatable {
         switch type {
         case "text":
             self = .text(try container.decode(String.self, forKey: .text))
+        case "thinking":
+            self = .thinking(try container.decodeIfPresent(String.self, forKey: .thinking) ?? "")
         case "image":
             self = .image(
                 data: try container.decode(Data.self, forKey: .data),

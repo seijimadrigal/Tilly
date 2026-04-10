@@ -8,6 +8,10 @@ struct MessageContentView: View {
         VStack(alignment: .leading, spacing: 8) {
             ForEach(Array(content.enumerated()), id: \.offset) { _, block in
                 switch block {
+                case .thinking(let text):
+                    if !text.isEmpty {
+                        ThinkingDropdown(text: text)
+                    }
                 case .text(let text):
                     RichTextView(text: text)
                 case .image(let data, _):
@@ -266,6 +270,65 @@ struct MarkdownTableView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 8)
                 .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Thinking Dropdown (collapsible reasoning)
+
+struct ThinkingDropdown: View {
+    let text: String
+    @State private var isExpanded = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) { isExpanded.toggle() }
+            } label: {
+                HStack(spacing: 8) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(.purple.opacity(0.5))
+                        .frame(width: 3)
+
+                    Image(systemName: "brain")
+                        .font(.caption)
+                        .foregroundStyle(.purple)
+
+                    Text("Thinking")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.primary)
+
+                    Text("(\(text.count) chars)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Spacer()
+
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                Text(text)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                    .lineSpacing(3)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(.textBackgroundColor).opacity(0.3))
+            }
+        }
+        .background(Color.purple.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.purple.opacity(0.12), lineWidth: 1)
         )
     }
 }
