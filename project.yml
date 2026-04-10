@@ -65,6 +65,7 @@ targets:
         DEVELOPMENT_TEAM: YZFVX59ZM2
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: "Apple Development"
+        ENABLE_HARDENED_RUNTIME: YES
         ENABLE_PREVIEWS: YES
         SWIFT_STRICT_CONCURRENCY: complete
         OTHER_LDFLAGS: "-ObjC"

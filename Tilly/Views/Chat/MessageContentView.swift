@@ -39,7 +39,7 @@ struct RichTextView: View {
             ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
                 switch segment {
                 case .text(let content):
-                    Text(LocalizedStringKey(content))
+                    EmojiReplacedText(text: content)
                         .font(.body)
                         .lineSpacing(4)
                         .textSelection(.enabled)
@@ -270,6 +270,80 @@ struct MarkdownTableView: View {
     }
 }
 
+// MARK: - Emoji → SF Symbol Replacement
+
+struct EmojiReplacedText: View {
+    let text: String
+
+    private static let emojiMap: [Character: String] = [
+        "👋": "hand.wave",
+        "✅": "checkmark.circle.fill",
+        "❌": "xmark.circle.fill",
+        "📝": "doc.text",
+        "🔍": "magnifyingglass",
+        "⚡": "bolt.fill",
+        "🎯": "target",
+        "💡": "lightbulb.fill",
+        "🔧": "wrench.fill",
+        "📁": "folder.fill",
+        "🌐": "globe",
+        "📊": "chart.bar.fill",
+        "🚀": "paperplane.fill",
+        "⏳": "hourglass",
+        "✨": "sparkles",
+        "🔒": "lock.fill",
+        "🔑": "key.fill",
+        "📌": "pin.fill",
+        "🗂️": "folder.badge.gearshape",
+        "💻": "laptopcomputer",
+        "🖥️": "desktopcomputer",
+        "📱": "iphone",
+        "⚠️": "exclamationmark.triangle.fill",
+        "ℹ️": "info.circle.fill",
+        "🔗": "link",
+        "📎": "paperclip",
+        "🎉": "party.popper",
+        "👍": "hand.thumbsup.fill",
+        "👎": "hand.thumbsdown.fill",
+        "🤔": "questionmark.bubble",
+        "💬": "bubble.left.fill",
+        "📞": "phone.fill",
+        "📧": "envelope.fill",
+        "🏠": "house.fill",
+        "⭐": "star.fill",
+    ]
+
+    var body: some View {
+        buildText()
+    }
+
+    private func buildText() -> Text {
+        var result = Text("")
+        var currentChunk = ""
+
+        for char in text {
+            if let symbolName = Self.emojiMap[char] {
+                // Flush current text chunk
+                if !currentChunk.isEmpty {
+                    result = result + Text(LocalizedStringKey(currentChunk))
+                    currentChunk = ""
+                }
+                // Add SF Symbol
+                result = result + Text(Image(systemName: symbolName)).foregroundStyle(.secondary)
+            } else {
+                currentChunk.append(char)
+            }
+        }
+
+        // Flush remaining text
+        if !currentChunk.isEmpty {
+            result = result + Text(LocalizedStringKey(currentChunk))
+        }
+
+        return result
+    }
+}
+
 // MARK: - Code Block View (with copy button & language label)
 
 struct CodeBlockView: View {
@@ -328,37 +402,49 @@ struct FileChipView: View {
     @State private var showPreview = false
 
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: iconForMime(file.mimeType))
-                .font(.title3)
-                .foregroundStyle(.blue)
-                .frame(width: 32, height: 32)
-                .background(Color.blue.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+        VStack(alignment: .leading, spacing: 0) {
+            // File header chip
+            HStack(spacing: 10) {
+                Image(systemName: iconForMime(file.mimeType))
+                    .font(.title3)
+                    .foregroundStyle(.blue)
+                    .frame(width: 32, height: 32)
+                    .background(Color.blue.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
 
-            VStack(alignment: .leading, spacing: 1) {
-                Text(file.fileName)
-                    .font(.caption.weight(.medium))
-                    .lineLimit(1)
-                Text(ByteCountFormatter.string(fromByteCount: file.sizeBytes, countStyle: .file))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(file.fileName)
+                        .font(.caption.weight(.medium))
+                        .lineLimit(1)
+                    Text(ByteCountFormatter.string(fromByteCount: file.sizeBytes, countStyle: .file))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
 
-            Spacer()
+                Spacer()
 
-            // Action buttons
-            HStack(spacing: 4) {
+                // Preview toggle
+                Button {
+                    withAnimation(.easeInOut(duration: 0.15)) { showPreview.toggle() }
+                } label: {
+                    Image(systemName: showPreview ? "eye.slash" : "eye")
+                        .font(.caption)
+                        .foregroundStyle(.blue)
+                }
+                .buttonStyle(.plain)
+                .help(showPreview ? "Hide preview" : "Preview")
+
+                // Open externally
                 if FileManager.default.fileExists(atPath: file.filePath) {
                     Button {
                         NSWorkspace.shared.open(URL(fileURLWithPath: file.filePath))
                     } label: {
                         Image(systemName: "arrow.up.right.square")
                             .font(.caption)
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
-                    .help("Open file")
+                    .help("Open in app")
 
                     Button {
                         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: file.filePath)])
@@ -371,8 +457,14 @@ struct FileChipView: View {
                     .help("Show in Finder")
                 }
             }
+            .padding(8)
+
+            // Inline preview (expandable)
+            if showPreview {
+                Divider()
+                InlineFilePreview(filePath: file.filePath, mimeType: file.mimeType)
+            }
         }
-        .padding(8)
         .background(Color(.controlBackgroundColor).opacity(0.5))
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(
@@ -380,9 +472,7 @@ struct FileChipView: View {
                 .stroke(Color.gray.opacity(0.15), lineWidth: 1)
         )
         .onTapGesture {
-            if FileManager.default.fileExists(atPath: file.filePath) {
-                NSWorkspace.shared.open(URL(fileURLWithPath: file.filePath))
-            }
+            withAnimation(.easeInOut(duration: 0.15)) { showPreview.toggle() }
         }
     }
 
@@ -394,5 +484,65 @@ struct FileChipView: View {
         if mime.contains("json") { return "curlybraces" }
         if mime.contains("markdown") || mime.contains("md") { return "doc.text" }
         return "doc"
+    }
+}
+
+// MARK: - Inline File Preview
+
+struct InlineFilePreview: View {
+    let filePath: String
+    let mimeType: String
+
+    var body: some View {
+        Group {
+            if mimeType.hasPrefix("image/"), let nsImage = NSImage(contentsOfFile: filePath) {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: 500, maxHeight: 400)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .padding(8)
+            } else if isTextFile {
+                ScrollView {
+                    Text(loadTextContent())
+                        .font(.system(size: 12, design: .monospaced))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(10)
+                }
+                .frame(maxHeight: 300)
+                .background(Color(.textBackgroundColor).opacity(0.5))
+            } else {
+                HStack {
+                    Image(systemName: "doc.fill")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                    Text("Preview not available for this file type")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(12)
+            }
+        }
+    }
+
+    private var isTextFile: Bool {
+        let textExtensions = ["md", "txt", "swift", "py", "js", "ts", "json", "yaml", "yml",
+                              "toml", "xml", "html", "css", "sh", "bash", "zsh", "c", "cpp",
+                              "h", "rs", "go", "java", "kt", "rb", "r", "sql", "csv", "log",
+                              "conf", "cfg", "ini", "env", "dockerfile", "makefile"]
+        let ext = URL(fileURLWithPath: filePath).pathExtension.lowercased()
+        return textExtensions.contains(ext) || mimeType.hasPrefix("text/")
+    }
+
+    private func loadTextContent() -> String {
+        guard let content = try? String(contentsOfFile: filePath, encoding: .utf8) else {
+            return "(Unable to read file)"
+        }
+        let maxChars = 5000
+        if content.count > maxChars {
+            return String(content.prefix(maxChars)) + "\n\n... [Preview truncated at \(maxChars) chars. Click 'Open in app' for full content.]"
+        }
+        return content
     }
 }

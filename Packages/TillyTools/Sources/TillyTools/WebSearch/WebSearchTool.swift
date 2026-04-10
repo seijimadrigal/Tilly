@@ -1,20 +1,23 @@
 import Foundation
 import TillyCore
 
-/// Search the web via DuckDuckGo (no API key needed).
+/// Search the web via Tavily API — structured JSON results, no HTML scraping.
 public final class WebSearchTool: ToolExecutable, @unchecked Sendable {
+    private let apiKey = "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"
+
     public init() {}
 
     public var definition: ToolDefinition {
         ToolDefinition(
             function: ToolDefinition.FunctionDef(
                 name: "web_search",
-                description: "Search the web using DuckDuckGo. Returns titles, URLs, and snippets for the top results. Use this when you need to find information, documentation, or current events. Follow up with web_fetch to read specific pages.",
+                description: "Search the web using Tavily. Returns titles, URLs, and content snippets. Use for finding information, documentation, current events, and research. Follow up with web_fetch to read full pages.",
                 parameters: .object([
                     "type": .string("object"),
                     "properties": .object([
                         "query": .object(["type": .string("string"), "description": .string("The search query.")]),
-                        "num_results": .object(["type": .string("integer"), "description": .string("Number of results to return. Default 5, max 10.")]),
+                        "num_results": .object(["type": .string("integer"), "description": .string("Number of results. Default 5, max 10.")]),
+                        "search_depth": .object(["type": .string("string"), "enum": .array([.string("basic"), .string("advanced")]), "description": .string("'basic' for quick search, 'advanced' for deeper research. Default basic.")]),
                     ]),
                     "required": .array([.string("query")]),
                 ])
@@ -23,101 +26,85 @@ public final class WebSearchTool: ToolExecutable, @unchecked Sendable {
     }
 
     public func execute(arguments: String) async throws -> ToolResult {
-        struct Args: Decodable { let query: String; let num_results: Int? }
+        struct Args: Decodable {
+            let query: String
+            let num_results: Int?
+            let search_depth: String?
+        }
+
         guard let data = arguments.data(using: .utf8) else { throw TillyError.toolExecutionFailed("Invalid args") }
         let args = try JSONDecoder().decode(Args.self, from: data)
 
         let maxResults = min(args.num_results ?? 5, 10)
-        let encoded = args.query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? args.query
 
-        // Use DuckDuckGo HTML search (no API key needed)
-        let searchURL = URL(string: "https://html.duckduckgo.com/html/?q=\(encoded)")!
-        var request = URLRequest(url: searchURL)
-        request.timeoutInterval = 15
-        request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Tilly/0.1", forHTTPHeaderField: "User-Agent")
+        // Build Tavily API request
+        let requestBody: [String: Any] = [
+            "api_key": apiKey,
+            "query": args.query,
+            "max_results": maxResults,
+            "search_depth": args.search_depth ?? "basic",
+            "include_answer": true,
+        ]
+
+        guard let bodyData = try? JSONSerialization.data(withJSONObject: requestBody),
+              let url = URL(string: "https://api.tavily.com/search") else {
+            return ToolResult(content: "Failed to build search request", isError: true)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.httpBody = bodyData
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 30
 
         do {
-            let (data, _) = try await URLSession.shared.data(for: request)
-            guard let html = String(data: data, encoding: .utf8) else {
-                return ToolResult(content: "Failed to decode search results", isError: true)
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            guard let http = response as? HTTPURLResponse else {
+                return ToolResult(content: "Invalid response from Tavily", isError: true)
             }
 
-            let results = parseResults(html: html, maxResults: maxResults)
+            guard (200...299).contains(http.statusCode) else {
+                let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
+                return ToolResult(content: "Tavily API error (HTTP \(http.statusCode)): \(errorBody)", isError: true)
+            }
 
-            if results.isEmpty {
-                return ToolResult(content: "No results found for: \(args.query)")
+            // Parse Tavily JSON response
+            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                return ToolResult(content: "Failed to parse Tavily response", isError: true)
             }
 
             var output = "Search results for: \(args.query)\n\n"
-            for (i, result) in results.enumerated() {
-                output += "\(i + 1). \(result.title)\n"
-                output += "   \(result.url)\n"
-                if !result.snippet.isEmpty {
-                    output += "   \(result.snippet)\n"
+
+            // Include Tavily's AI-generated answer if available
+            if let answer = json["answer"] as? String, !answer.isEmpty {
+                output += "**Quick Answer:** \(answer)\n\n"
+            }
+
+            // Parse individual results
+            if let results = json["results"] as? [[String: Any]] {
+                for (i, result) in results.enumerated() {
+                    let title = result["title"] as? String ?? "Untitled"
+                    let url = result["url"] as? String ?? ""
+                    let content = result["content"] as? String ?? ""
+
+                    output += "\(i + 1). \(title)\n"
+                    output += "   \(url)\n"
+                    if !content.isEmpty {
+                        let snippet = String(content.prefix(200))
+                        output += "   \(snippet)\n"
+                    }
+                    output += "\n"
                 }
-                output += "\n"
+            }
+
+            if output == "Search results for: \(args.query)\n\n" {
+                return ToolResult(content: "No results found for: \(args.query)")
             }
 
             return ToolResult(content: output)
         } catch {
             return ToolResult(content: "Search failed: \(error.localizedDescription)", isError: true)
         }
-    }
-
-    private struct SearchResult {
-        let title: String
-        let url: String
-        let snippet: String
-    }
-
-    private func parseResults(html: String, maxResults: Int) -> [SearchResult] {
-        var results: [SearchResult] = []
-
-        // Parse DuckDuckGo HTML results — look for result links
-        let linkPattern = #"<a rel="nofollow" class="result__a" href="([^"]+)"[^>]*>(.+?)</a>"#
-        let snippetPattern = #"<a class="result__snippet"[^>]*>(.+?)</a>"#
-
-        guard let linkRegex = try? NSRegularExpression(pattern: linkPattern, options: .dotMatchesLineSeparators),
-              let snippetRegex = try? NSRegularExpression(pattern: snippetPattern, options: .dotMatchesLineSeparators) else {
-            return results
-        }
-
-        let range = NSRange(html.startIndex..., in: html)
-        let linkMatches = linkRegex.matches(in: html, range: range)
-        let snippetMatches = snippetRegex.matches(in: html, range: range)
-
-        for (i, match) in linkMatches.enumerated() {
-            if results.count >= maxResults { break }
-
-            guard let urlRange = Range(match.range(at: 1), in: html),
-                  let titleRange = Range(match.range(at: 2), in: html) else { continue }
-
-            let url = String(html[urlRange])
-            let title = stripTags(String(html[titleRange]))
-            var snippet = ""
-
-            if i < snippetMatches.count {
-                if let snippetRange = Range(snippetMatches[i].range(at: 1), in: html) {
-                    snippet = stripTags(String(html[snippetRange]))
-                }
-            }
-
-            guard url.hasPrefix("http") else { continue }
-            results.append(SearchResult(title: title, url: url, snippet: snippet))
-        }
-
-        return results
-    }
-
-    private func stripTags(_ html: String) -> String {
-        guard let regex = try? NSRegularExpression(pattern: "<[^>]+>", options: .caseInsensitive) else { return html }
-        return regex.stringByReplacingMatches(in: html, range: NSRange(html.startIndex..., in: html), withTemplate: "")
-            .replacingOccurrences(of: "&amp;", with: "&")
-            .replacingOccurrences(of: "&lt;", with: "<")
-            .replacingOccurrences(of: "&gt;", with: ">")
-            .replacingOccurrences(of: "&quot;", with: "\"")
-            .replacingOccurrences(of: "&#x27;", with: "'")
-            .replacingOccurrences(of: "&nbsp;", with: " ")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
