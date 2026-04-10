@@ -491,6 +491,9 @@ final class AppState {
 
         isStreaming = false
 
+        // Auto-embed long responses as files (ChatGPT-style)
+        autoEmbedLongResponse(session: &session)
+
         // Sync completed session to Firebase + notify iOS
         if let session = currentSession {
             syncSessionToFirebase(session)
@@ -683,6 +686,104 @@ final class AppState {
     /// Extract a brief summary from tool call arguments for progress display.
     /// Offload large tool results to file, keep only a preview in the message history.
     /// This prevents context overflow from web_fetch, execute_command, etc.
+    /// Auto-embed long assistant responses as files (ChatGPT-style).
+    /// If the last assistant message is >800 chars, save it as a .md file and replace
+    /// the message content with a short summary + FileChipView.
+    private func autoEmbedLongResponse(session: inout Session) {
+        guard let lastIdx = session.messages.indices.last,
+              session.messages[lastIdx].role == .assistant else { return }
+
+        let fullText = session.messages[lastIdx].textContent
+        guard fullText.count > 800 else { return }
+
+        // Extract thinking content if present
+        let thinkingBlocks = session.messages[lastIdx].content.compactMap { block -> String? in
+            if case .thinking(let t) = block { return t }
+            return nil
+        }
+
+        // Separate thinking from content text
+        let (thinking, cleanText) = separateThinkingFromContent(fullText)
+
+        // Save full content as markdown file
+        let timestamp = Int(Date().timeIntervalSince1970)
+        let title = session.title.replacingOccurrences(of: " ", with: "_")
+            .components(separatedBy: CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "_-")).inverted)
+            .joined()
+        let fileName = "\(title)_\(timestamp).md"
+        let filePath = NSString(string: "~/Desktop/\(fileName)").expandingTildeInPath
+
+        try? cleanText.write(toFile: filePath, atomically: true, encoding: .utf8)
+
+        guard FileManager.default.fileExists(atPath: filePath) else { return }
+
+        let size = (try? FileManager.default.attributesOfItem(atPath: filePath)[.size] as? Int64) ?? Int64(cleanText.count)
+
+        // Build summary (first ~200 chars or first paragraph)
+        let summary: String
+        if let firstPara = cleanText.components(separatedBy: "\n\n").first, firstPara.count < 300 {
+            summary = firstPara
+        } else {
+            summary = String(cleanText.prefix(200)) + "..."
+        }
+
+        // Replace message content: thinking (if any) + summary + file chip
+        var newContent: [ContentBlock] = []
+        let allThinking = (thinkingBlocks + [thinking]).filter { !$0.isEmpty }.joined(separator: "\n")
+        if !allThinking.isEmpty {
+            newContent.append(.thinking(allThinking))
+        }
+        newContent.append(.text(summary))
+        newContent.append(.fileReference(FileAttachment(
+            fileName: fileName,
+            filePath: filePath,
+            mimeType: "text/markdown",
+            sizeBytes: size
+        )))
+
+        session.messages[lastIdx].content = newContent
+        updateCurrentSession(session)
+
+        DiagnosticLogger.shared.log(.system, "Auto-embedded \(cleanText.count) char response as \(fileName)")
+    }
+
+    /// Separate model "thinking" from actual content.
+    /// Detects reasoning patterns at the start of text (e.g., "The user is asking...", "Let me think...")
+    private func separateThinkingFromContent(_ text: String) -> (thinking: String, content: String) {
+        let thinkingPrefixes = [
+            "The user is ", "The user wants ", "The user asked ",
+            "Let me ", "I need to ", "I should ", "I'll ",
+            "This is a ", "This seems ", "This looks ",
+            "OK, ", "Okay, ", "Alright, ",
+            "First, I ", "Now I ", "So the user ",
+        ]
+
+        let lines = text.components(separatedBy: "\n")
+        var thinkingLines: [String] = []
+        var contentStartIndex = 0
+
+        for (i, line) in lines.enumerated() {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty && i < 3 { continue }  // Skip early blank lines
+
+            let isThinking = thinkingPrefixes.contains(where: { trimmed.hasPrefix($0) })
+            if isThinking && i < 5 {  // Only first few lines can be "thinking"
+                thinkingLines.append(trimmed)
+                contentStartIndex = i + 1
+            } else {
+                break
+            }
+        }
+
+        if thinkingLines.isEmpty {
+            return ("", text)
+        }
+
+        let thinking = thinkingLines.joined(separator: "\n")
+        let content = lines[contentStartIndex...].joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        return (thinking, content.isEmpty ? text : content)
+    }
+
     private func offloadIfLarge(_ result: ToolResult, callID: String) -> ToolResult {
         let maxInline = 1500
         guard result.content.count > maxInline else { return result }
