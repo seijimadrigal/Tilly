@@ -282,6 +282,8 @@ struct ModelPopoverView: View {
 
     // MARK: - Auto Selection with API Test
 
+    /// Auto-select: test current provider first, pick best model from it for the role.
+    /// Falls back to tier-matched profiles, then any working provider.
     private func autoSelectWithTest(
         tier: ModelRouter.ModelTier,
         setProvider: @escaping (ProviderID) -> Void,
@@ -289,15 +291,28 @@ struct ModelPopoverView: View {
         setStatus: @escaping (String?) -> Void,
         postAction: @escaping () -> Void
     ) async {
+        let currentProvider = appState.selectedProviderID
+        setStatus("Testing \(currentProvider.displayName)...")
+
+        // Step 1: Test the currently selected provider first
+        await appState.testProviderConnection(currentProvider)
+        if case .connected = appState.providerStatuses[currentProvider] {
+            // It works — pick the best model from this provider for the role
+            let models = await appState.loadModels(for: currentProvider)
+            let bestModel = pickBestModel(from: models, provider: currentProvider, tier: tier)
+            setProvider(currentProvider)
+            setModel(bestModel)
+            setStatus("Connected — \(currentProvider.displayName) / \(bestModel)")
+            postAction()
+            return
+        }
+
+        // Step 2: Current provider failed — try tier-matched profiles
+        setStatus("Trying alternatives...")
         let profiles = ModelRouter.ModelProfile.defaults.filter { $0.tier == tier }
-        setStatus("Testing...")
-
-        for profile in profiles {
-            // Test this provider
+        for profile in profiles where profile.providerID != currentProvider {
             await appState.testProviderConnection(profile.providerID)
-            let status = appState.providerStatuses[profile.providerID]
-
-            if case .connected = status {
+            if case .connected = appState.providerStatuses[profile.providerID] {
                 setProvider(profile.providerID)
                 setModel(profile.modelID)
                 setStatus("Connected — \(profile.providerID.displayName)")
@@ -306,23 +321,56 @@ struct ModelPopoverView: View {
             }
         }
 
-        // No provider worked — try all providers with API keys
-        for providerID in ProviderID.allCases {
+        // Step 3: Try any provider with a working API key
+        for providerID in ProviderID.allCases where providerID != currentProvider {
             if appState.keychainService.hasAPIKey(for: providerID) || !providerID.requiresAPIKey {
                 await appState.testProviderConnection(providerID)
                 if case .connected = appState.providerStatuses[providerID] {
-                    if let config = appState.providerConfigs.first(where: { $0.providerID == providerID }) {
-                        setProvider(providerID)
-                        setModel(config.defaultModel ?? "")
-                        setStatus("Fallback — \(providerID.displayName)")
-                        postAction()
-                        return
-                    }
+                    let models = await appState.loadModels(for: providerID)
+                    let bestModel = pickBestModel(from: models, provider: providerID, tier: tier)
+                    setProvider(providerID)
+                    setModel(bestModel)
+                    setStatus("Fallback — \(providerID.displayName)")
+                    postAction()
+                    return
                 }
             }
         }
 
         setStatus("Failed — no working provider found")
+    }
+
+    /// Pick the best model from a list for a given tier/role.
+    private func pickBestModel(from models: [ModelInfo], provider: ProviderID, tier: ModelRouter.ModelTier) -> String {
+        // Check if there's a known profile match for this provider + tier
+        if let profile = ModelRouter.ModelProfile.defaults.first(where: { $0.providerID == provider && $0.tier == tier }) {
+            if models.contains(where: { $0.id == profile.modelID }) {
+                return profile.modelID
+            }
+        }
+
+        // Heuristic: pick by name patterns based on tier
+        let sorted = models.sorted { $0.id < $1.id }
+        switch tier {
+        case .flash:
+            // Prefer "flash", "mini", "small", "fast" in name
+            if let m = sorted.first(where: { $0.id.lowercased().contains("flash") }) { return m.id }
+            if let m = sorted.first(where: { $0.id.lowercased().contains("mini") }) { return m.id }
+            if let m = sorted.first(where: { $0.id.lowercased().contains("fast") }) { return m.id }
+        case .standard:
+            // Prefer "chat", "8k", "v1", avoid "mini"/"flash"
+            if let m = sorted.first(where: { $0.id.lowercased().contains("chat") && !$0.id.lowercased().contains("mini") }) { return m.id }
+        case .premium:
+            // Prefer "pro", "plus", largest version number
+            if let m = sorted.first(where: { $0.id.lowercased().contains("pro") }) { return m.id }
+            if let m = sorted.first(where: { $0.id.lowercased().contains("plus") }) { return m.id }
+        }
+
+        // Fall back to provider's default model, or first available
+        if let config = appState.providerConfigs.first(where: { $0.providerID == provider }), let dm = config.defaultModel {
+            return dm
+        }
+        return models.first?.id ?? ""
     }
 
     // MARK: - Helpers
