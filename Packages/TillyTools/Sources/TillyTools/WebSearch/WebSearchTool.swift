@@ -1,9 +1,11 @@
 import Foundation
 import TillyCore
 
-/// Search the web via Tavily API — structured JSON results, no HTML scraping.
+/// Search the web via Brave Search API — fast, structured JSON results.
+/// Falls back to Tavily, then DuckDuckGo if Brave fails.
 public final class WebSearchTool: ToolExecutable, @unchecked Sendable {
-    private let apiKey = "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"
+    private let braveApiKey = "BSAg_3CSHPf1URjO4GixaWZpPXmHg9o"
+    private let tavilyApiKey = "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"
 
     public init() {}
 
@@ -11,12 +13,12 @@ public final class WebSearchTool: ToolExecutable, @unchecked Sendable {
         ToolDefinition(
             function: ToolDefinition.FunctionDef(
                 name: "web_search",
-                description: "Search the web using Tavily. Returns titles, URLs, and content snippets. Use for finding information, documentation, current events, and research. Follow up with web_fetch to read full pages.",
+                description: "Search the web using Brave Search. Returns titles, URLs, and content snippets. Use for finding information, documentation, current events, and research. Follow up with web_fetch to read full pages.",
                 parameters: .object([
                     "type": .string("object"),
                     "properties": .object([
                         "query": .object(["type": .string("string"), "description": .string("The search query.")]),
-                        "num_results": .object(["type": .string("integer"), "description": .string("Number of results. Default 5, max 10.")]),
+                        "num_results": .object(["type": .string("integer"), "description": .string("Number of results. Default 5, max 20.")]),
                         "search_depth": .object(["type": .string("string"), "enum": .array([.string("basic"), .string("advanced")]), "description": .string("'basic' for quick search, 'advanced' for deeper research. Default basic.")]),
                     ]),
                     "required": .array([.string("query")]),
@@ -34,21 +36,89 @@ public final class WebSearchTool: ToolExecutable, @unchecked Sendable {
 
         guard let data = arguments.data(using: .utf8) else { throw TillyError.toolExecutionFailed("Invalid args") }
         let args = try JSONDecoder().decode(Args.self, from: data)
+        let maxResults = min(args.num_results ?? 5, 20)
 
-        let maxResults = min(args.num_results ?? 5, 10)
+        // Try Brave Search first
+        let braveResult = await braveSearch(query: args.query, count: maxResults)
+        if !braveResult.isError { return braveResult }
 
-        // Build Tavily API request
+        // Fallback to Tavily
+        let tavilyResult = await tavilySearch(query: args.query, maxResults: maxResults, depth: args.search_depth ?? "basic")
+        if !tavilyResult.isError { return tavilyResult }
+
+        // Last resort: DuckDuckGo
+        return await ddgSearch(query: args.query, maxResults: maxResults)
+    }
+
+    // MARK: - Brave Search (primary)
+
+    private func braveSearch(query: String, count: Int) async -> ToolResult {
+        let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
+        guard let url = URL(string: "https://api.search.brave.com/res/v1/web/search?q=\(encoded)&count=\(count)") else {
+            return ToolResult(content: "Invalid query", isError: true)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(braveApiKey)", forHTTPHeaderField: "X-Subscription-Token")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 15
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+                let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+                return ToolResult(content: "Brave Search error (HTTP \(code))", isError: true)
+            }
+
+            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                return ToolResult(content: "Failed to parse Brave response", isError: true)
+            }
+
+            var output = "Search results for: \(query)\n\n"
+
+            // Web results
+            if let web = json["web"] as? [String: Any],
+               let results = web["results"] as? [[String: Any]] {
+                for (i, result) in results.enumerated() {
+                    let title = result["title"] as? String ?? "Untitled"
+                    let resultUrl = result["url"] as? String ?? ""
+                    let description = result["description"] as? String ?? ""
+
+                    output += "\(i + 1). \(title)\n"
+                    output += "   \(resultUrl)\n"
+                    if !description.isEmpty {
+                        output += "   \(String(description.prefix(250)))\n"
+                    }
+                    output += "\n"
+                }
+            }
+
+            if output == "Search results for: \(query)\n\n" {
+                return ToolResult(content: "No results found for: \(query)")
+            }
+
+            return ToolResult(content: output)
+        } catch {
+            return ToolResult(content: "Brave Search failed: \(error.localizedDescription)", isError: true)
+        }
+    }
+
+    // MARK: - Tavily (fallback 1)
+
+    private func tavilySearch(query: String, maxResults: Int, depth: String) async -> ToolResult {
         let requestBody: [String: Any] = [
-            "api_key": apiKey,
-            "query": args.query,
+            "api_key": tavilyApiKey,
+            "query": query,
             "max_results": maxResults,
-            "search_depth": args.search_depth ?? "basic",
+            "search_depth": depth,
             "include_answer": true,
         ]
 
         guard let bodyData = try? JSONSerialization.data(withJSONObject: requestBody),
               let url = URL(string: "https://api.tavily.com/search") else {
-            return ToolResult(content: "Failed to build search request", isError: true)
+            return ToolResult(content: "Tavily request build failed", isError: true)
         }
 
         var request = URLRequest(url: url)
@@ -60,58 +130,44 @@ public final class WebSearchTool: ToolExecutable, @unchecked Sendable {
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
 
-            guard let http = response as? HTTPURLResponse else {
-                return ToolResult(content: "Invalid response from Tavily", isError: true)
+            guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+                let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+                return ToolResult(content: "Tavily error (HTTP \(code))", isError: true)
             }
 
-            guard (200...299).contains(http.statusCode) else {
-                let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
-                return ToolResult(content: "Tavily API error (HTTP \(http.statusCode)): \(errorBody)", isError: true)
-            }
-
-            // Parse Tavily JSON response
             guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
                 return ToolResult(content: "Failed to parse Tavily response", isError: true)
             }
 
-            var output = "Search results for: \(args.query)\n\n"
+            var output = "Search results for: \(query)\n\n"
 
-            // Include Tavily's AI-generated answer if available
             if let answer = json["answer"] as? String, !answer.isEmpty {
                 output += "**Quick Answer:** \(answer)\n\n"
             }
 
-            // Parse individual results
             if let results = json["results"] as? [[String: Any]] {
                 for (i, result) in results.enumerated() {
                     let title = result["title"] as? String ?? "Untitled"
-                    let url = result["url"] as? String ?? ""
+                    let resultUrl = result["url"] as? String ?? ""
                     let content = result["content"] as? String ?? ""
-
-                    output += "\(i + 1). \(title)\n"
-                    output += "   \(url)\n"
-                    if !content.isEmpty {
-                        let snippet = String(content.prefix(200))
-                        output += "   \(snippet)\n"
-                    }
+                    output += "\(i + 1). \(title)\n   \(resultUrl)\n"
+                    if !content.isEmpty { output += "   \(String(content.prefix(200)))\n" }
                     output += "\n"
                 }
             }
 
-            if output == "Search results for: \(args.query)\n\n" {
-                return ToolResult(content: "No results found for: \(args.query)")
+            if output == "Search results for: \(query)\n\n" {
+                return ToolResult(content: "No results found for: \(query)")
             }
-
             return ToolResult(content: output)
         } catch {
-            // Fallback: try DuckDuckGo Instant Answer API (free, no key)
-            print("[WebSearch] Tavily failed, trying DuckDuckGo fallback: \(error.localizedDescription)")
-            return await fallbackDDGSearch(query: args.query, maxResults: maxResults)
+            return ToolResult(content: "Tavily failed: \(error.localizedDescription)", isError: true)
         }
     }
 
-    /// Fallback: DuckDuckGo Instant Answer API (free, no API key)
-    private func fallbackDDGSearch(query: String, maxResults: Int) async -> ToolResult {
+    // MARK: - DuckDuckGo (fallback 2)
+
+    private func ddgSearch(query: String, maxResults: Int) async -> ToolResult {
         let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
         guard let url = URL(string: "https://api.duckduckgo.com/?q=\(encoded)&format=json&no_html=1&skip_disambig=1") else {
             return ToolResult(content: "Search failed: invalid query", isError: true)
@@ -123,12 +179,11 @@ public final class WebSearchTool: ToolExecutable, @unchecked Sendable {
         do {
             let (data, _) = try await URLSession.shared.data(for: request)
             guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                return ToolResult(content: "DuckDuckGo fallback: failed to parse response", isError: true)
+                return ToolResult(content: "DuckDuckGo: failed to parse", isError: true)
             }
 
             var output = "Search results for: \(query) (via DuckDuckGo)\n\n"
 
-            // Abstract (instant answer)
             if let abstract = json["Abstract"] as? String, !abstract.isEmpty {
                 let source = json["AbstractSource"] as? String ?? ""
                 let abstractURL = json["AbstractURL"] as? String ?? ""
@@ -137,13 +192,11 @@ public final class WebSearchTool: ToolExecutable, @unchecked Sendable {
                 output += "\n"
             }
 
-            // Related topics
             if let topics = json["RelatedTopics"] as? [[String: Any]] {
                 for (i, topic) in topics.prefix(maxResults).enumerated() {
                     if let text = topic["Text"] as? String,
                        let firstURL = topic["FirstURL"] as? String {
-                        output += "\(i + 1). \(String(text.prefix(200)))\n"
-                        output += "   \(firstURL)\n\n"
+                        output += "\(i + 1). \(String(text.prefix(200)))\n   \(firstURL)\n\n"
                     }
                 }
             }
@@ -151,7 +204,6 @@ public final class WebSearchTool: ToolExecutable, @unchecked Sendable {
             if output == "Search results for: \(query) (via DuckDuckGo)\n\n" {
                 return ToolResult(content: "No results found for: \(query)")
             }
-
             return ToolResult(content: output)
         } catch {
             return ToolResult(content: "All search engines failed: \(error.localizedDescription)", isError: true)
