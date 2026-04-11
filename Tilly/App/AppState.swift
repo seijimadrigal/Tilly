@@ -451,6 +451,8 @@ final class AppState {
         }
         let modelID = subAgentModelID
 
+        DiagnosticLogger.shared.log(.agent, "[Sub-Agent: \(subAgentProviderID.displayName)/\(modelID)] Spawning role=\(role), task=\(String(task.prefix(80)))...")
+
         // Build restricted tool set for the sub-agent
         let defaultToolNames = ["web_search", "web_fetch", "http_request", "read_file", "list_directory", "execute_command", "edit_file", "git", "scratchpad_write", "scratchpad_read"]
         let allowedNames = Set(allowedTools ?? defaultToolNames)
@@ -510,8 +512,10 @@ final class AppState {
                 }
             }
 
+            DiagnosticLogger.shared.log(.agent, "[Sub-Agent: \(subAgentProviderID.displayName)/\(modelID)] Completed role=\(role), result=\(result.count) chars")
             return result
         } catch {
+            DiagnosticLogger.shared.error("[Sub-Agent: \(subAgentProviderID.displayName)/\(modelID)] Failed role=\(role): \(error.localizedDescription)")
             return "Sub-agent error: \(error.localizedDescription)"
         }
     }
@@ -721,7 +725,7 @@ final class AppState {
             do {
                 let context = session.messages.suffix(4).map { $0.textContent }.joined(separator: "\n")
                 let classification = try await router.classify(userMessage: text, context: context)
-                DiagnosticLogger.shared.log(.agent, "Triage: \(classification.route) (complexity: \(String(format: "%.1f", classification.complexity)), reason: \(classification.reason))")
+                DiagnosticLogger.shared.log(.agent, "[Orchestrator: \(orchestratorProviderID.displayName)/\(orchestratorModelID)] Triage: \(classification.route) (complexity: \(String(format: "%.1f", classification.complexity)), reason: \(classification.reason))")
 
                 // Auto-route to different model based on complexity
                 if autoRouting {
@@ -746,6 +750,7 @@ final class AppState {
         }
 
         do {
+            DiagnosticLogger.shared.log(.agent, "[Main Agent: \(effectiveProvider.id.displayName)/\(effectiveModel)] Starting agent loop")
             try await runAgentLoop(session: &session, provider: effectiveProvider)
         } catch {
             if !(error is CancellationError) {
@@ -777,7 +782,7 @@ final class AppState {
                 let uniqueTools = Array(Set(toolsUsed))
                 do {
                     let reflection = try await reflector.critique(userRequest: text, agentResponse: response, toolsUsed: uniqueTools)
-                    DiagnosticLogger.shared.log(.agent, "Reflection: score=\(String(format: "%.1f", reflection.score)), acceptable=\(reflection.isAcceptable), issues=\(reflection.issues.joined(separator: ", "))")
+                    DiagnosticLogger.shared.log(.agent, "[Orchestrator: \(orchestratorProviderID.displayName)/\(orchestratorModelID)] Reflection: score=\(String(format: "%.1f", reflection.score)), acceptable=\(reflection.isAcceptable), issues=\(reflection.issues.joined(separator: ", "))")
                 } catch {
                     DiagnosticLogger.shared.error("Reflection failed: \(error.localizedDescription)")
                 }
