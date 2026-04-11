@@ -68,8 +68,9 @@ public final class ToolRegistry: @unchecked Sendable {
         registry.register(MemoryListTool(service: memoryService))
         registry.register(MemoryDeleteTool(service: memoryService))
 
-        // Memcloud recall (cloud memory context injection)
+        // Memcloud tools (cloud memory)
         registry.register(MemcloudRecallTool(service: memoryService))
+        registry.register(MemcloudAnswerTool(service: memoryService))
 
         // Memcloud consolidation (dream mode)
         let consolidateTool = MemcloudConsolidateTool(service: memoryService)

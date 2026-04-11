@@ -24,6 +24,11 @@ public enum TillyError: Error, LocalizedError, Sendable {
     case skillTestFailed(String)
     case skillCyclicDependency(String)
     case skillMissingInput(String)
+    case memoryReconciliationFailed(String)
+    case routingFailed(String)
+    case planExecutionFailed(String)
+    case gateRejected(String)
+    case modelUnavailable(ProviderID, String)
 
     public var errorDescription: String? {
         switch self {
@@ -76,6 +81,16 @@ public enum TillyError: Error, LocalizedError, Sendable {
             return "Cyclic dependency in skill chain: \(detail)"
         case .skillMissingInput(let detail):
             return "Missing skill input: \(detail)"
+        case .memoryReconciliationFailed(let detail):
+            return "Memory reconciliation failed: \(detail)"
+        case .routingFailed(let detail):
+            return "Routing failed: \(detail)"
+        case .planExecutionFailed(let detail):
+            return "Plan execution failed: \(detail)"
+        case .gateRejected(let detail):
+            return "Action rejected by user: \(detail)"
+        case .modelUnavailable(let provider, let model):
+            return "Model \(model) unavailable on \(provider.displayName)"
         }
     }
 

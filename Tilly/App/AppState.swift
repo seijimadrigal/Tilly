@@ -88,14 +88,37 @@ final class AppState {
         "execute_command", "read_file", "write_file", "edit_file", "list_directory",
         "web_search", "web_fetch", "http_request", "git",
         "memory_store", "memory_search", "memory_list", "memory_delete",
-        "memcloud_recall", "skill_run", "ask_user",
+        "memcloud_recall", "memcloud_answer", "skill_run", "ask_user",
         "scratchpad_write", "scratchpad_read", "delegate_task",
     ]
 
-    // MARK: - Memcloud Cache (Feature 5: Auto-recall)
-    /// Cached Memcloud context for system prompt injection
-    private var cachedMemcloudContext: String?
-    private var cachedSessionSummaries: String?
+    // MARK: - Unified Memory Layer
+    var unifiedMemory: UnifiedMemoryService!
+    let workingMemory = WorkingMemory()
+
+    // MARK: - Orchestration
+    private var triageRouter: TriageRouter?
+    private let gateChecker = GateChecker()
+    private var planExecutor: PlanExecutor?
+    private var reflectionAgent: ReflectionAgent?
+    var triageEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: "triageEnabled") }
+        set { UserDefaults.standard.set(newValue, forKey: "triageEnabled") }
+    }
+    var reflectionEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: "reflectionEnabled") }
+        set { UserDefaults.standard.set(newValue, forKey: "reflectionEnabled") }
+    }
+    var autoRouting: Bool {
+        get { UserDefaults.standard.bool(forKey: "autoRouting") }
+        set { UserDefaults.standard.set(newValue, forKey: "autoRouting") }
+    }
+
+    // MARK: - Multi-Model Routing
+    private let modelRouter = ModelRouter()
+    let usageTracker = UsageTracker()
+
+    // MARK: - Memcloud Cache
     private var memcloudFetchTask: Task<Void, Never>?
 
     // MARK: - Progress Visibility
@@ -135,6 +158,7 @@ final class AppState {
         setupMemcloud()
         setupConsolidationHandler()
         setupSuggestSkillsHandler()
+        setupOrchestration()
     }
 
     private func setupMemcloud() {
@@ -142,24 +166,31 @@ final class AppState {
             apiKey: "mc_b98b4767c4f2e1e1b671b5a8b422af7c1f57852a8b855f3d",
             userId: NSUserName()
         )
+        unifiedMemory = UnifiedMemoryService(local: memoryService)
         DiagnosticLogger.shared.log(.system, "Memcloud sync enabled for user \(NSUserName())")
+    }
+
+    private func setupOrchestration() {
+        // Triage router — uses cheapest model (ZAI flash) for classification
+        if let zaiProvider = providers[.zai] {
+            triageRouter = TriageRouter(provider: zaiProvider, routingModel: "glm-4-flash")
+            planExecutor = PlanExecutor(provider: zaiProvider, model: "glm-4-flash")
+            reflectionAgent = ReflectionAgent(provider: zaiProvider, model: "glm-4-flash")
+            DiagnosticLogger.shared.log(.system, "Orchestration layer initialized (triage + plan + reflection)")
+        } else if let defaultProvider = providers[selectedProviderID] {
+            // Fallback to default provider
+            triageRouter = TriageRouter(provider: defaultProvider, routingModel: selectedModelID)
+            planExecutor = PlanExecutor(provider: defaultProvider, model: selectedModelID)
+            reflectionAgent = ReflectionAgent(provider: defaultProvider, model: selectedModelID)
+            DiagnosticLogger.shared.log(.system, "Orchestration layer initialized with fallback provider")
+        }
     }
 
     private func refreshMemcloudCache() {
         memcloudFetchTask?.cancel()
         memcloudFetchTask = Task { [weak self] in
-            guard let self, let client = self.memoryService.memcloudClient else { return }
-
-            async let recallResult = client.recall(tokenBudget: 2000, format: "markdown")
-            async let summaryResult = client.recallSessionSummaries(count: 3)
-
-            if let recall = try? await recallResult {
-                await MainActor.run { self.cachedMemcloudContext = recall.context }
-            }
-            if let summaries = try? await summaryResult {
-                let text = summaries.memories.map { "- \(String($0.content.prefix(300)))" }.joined(separator: "\n")
-                await MainActor.run { self.cachedSessionSummaries = text }
-            }
+            guard let self else { return }
+            await self.unifiedMemory.refreshCache()
         }
     }
 
@@ -1359,12 +1390,10 @@ final class AppState {
         **Scratchpad** (session working memory):
         \(scratchpad.isEmpty ? "(empty)" : scratchpad)
 
-        **Memory** (\(memoryCount) local — use memory_search for local, memcloud_recall for cloud):
+        **Memory** (\(memoryCount) local — use memory_search for local, memcloud_recall/memcloud_answer for cloud):
         \(recentMemories.isEmpty ? "(none)" : recentMemories)
         Save memories AUTOMATICALLY: user prefs → user, feedback → feedback, project details → project, URLs → reference.
-        \(memoryService.isMemcloudEnabled ? "☁️ Memcloud sync ACTIVE — memories auto-sync to cloud. Use memcloud_recall for rich context retrieval." : "")
-        \(cachedMemcloudContext.map { "**Cloud Context**:\n\(String($0.prefix(1500)))\n" } ?? "")
-        \(cachedSessionSummaries.map { "**Recent Sessions**:\n\(String($0.prefix(800)))\n" } ?? "")
+        \(memoryService.isMemcloudEnabled ? "Memcloud sync ACTIVE — memories auto-sync to cloud. Use memcloud_recall for context, memcloud_answer for QA, memcloud_consolidate to clean duplicates." : "")
 
         **Skills** (\(skillCount) total — use skill_list for more):
         \(recentSkills.isEmpty ? "(none)" : recentSkills)

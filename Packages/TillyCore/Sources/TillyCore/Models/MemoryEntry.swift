@@ -14,6 +14,7 @@ public struct MemoryEntry: Codable, Sendable, Identifiable, Equatable {
     public let content: String
     public let created: Date
     public var updated: Date
+    public var tier: MemoryTier?
 
     public init(
         id: String,
@@ -21,7 +22,8 @@ public struct MemoryEntry: Codable, Sendable, Identifiable, Equatable {
         type: MemoryType,
         content: String,
         created: Date = Date(),
-        updated: Date = Date()
+        updated: Date = Date(),
+        tier: MemoryTier? = nil
     ) {
         self.id = id
         self.name = name
@@ -29,6 +31,7 @@ public struct MemoryEntry: Codable, Sendable, Identifiable, Equatable {
         self.content = content
         self.created = created
         self.updated = updated
+        self.tier = tier
     }
 
     /// One-line summary for MEMORY.md index

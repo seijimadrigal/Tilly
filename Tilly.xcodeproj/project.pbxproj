@@ -28,6 +28,7 @@
 		5A10D82BFAD30352F6170C9A /* TillyCore in Frameworks */ = {isa = PBXBuildFile; productRef = B64A66864A186E577D58E430 /* TillyCore */; };
 		61A93D2DBF8252EEB722A12F /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4960611D38330D558F611FE8 /* SignInView.swift */; };
 		629E6EE1AB3BF37343B61ED2 /* KeychainCredential.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDA8151488D0CC87875A2E3 /* KeychainCredential.swift */; };
+		6600B93BEF3F2715C07E14C2 /* UsageSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 730FDC0AF3B4C1A96D33064A /* UsageSummaryView.swift */; };
 		69333B0CB6EAA2F06DCFFB38 /* LogViewerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4FFA69597E54395FA6AB7BA /* LogViewerView.swift */; };
 		6AAE6F89D9A28BAF3878ABC0 /* TillyStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 41D604BDF3CE4BE6C9C398C8 /* TillyStorage */; };
 		6AF164B05D1390D2E88BB423 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 55B44A26794936896895EE78 /* GoogleSignIn */; };
@@ -72,6 +73,7 @@
 		627C01D94D3C5900E57F857D /* TillyRemoteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TillyRemoteApp.swift; sourceTree = "<group>"; };
 		6DFA74C474FC393767D0A1D0 /* ModelPopoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelPopoverView.swift; sourceTree = "<group>"; };
 		71DA0E94FACD996ED7607F9C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		730FDC0AF3B4C1A96D33064A /* UsageSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageSummaryView.swift; sourceTree = "<group>"; };
 		8B2F3390EB981E65499E8770 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		8D7DB2AB7E6C97C4B5FBF5DE /* MessageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageView.swift; sourceTree = "<group>"; };
 		997A8B9E2CE32343B11A6DCB /* TillyRemote.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TillyRemote.entitlements; sourceTree = "<group>"; };
@@ -303,6 +305,7 @@
 			children = (
 				6DFA74C474FC393767D0A1D0 /* ModelPopoverView.swift */,
 				B7539F33A7EFEFEF5758F954 /* SidebarView.swift */,
+				730FDC0AF3B4C1A96D33064A /* UsageSummaryView.swift */,
 			);
 			path = Sidebar;
 			sourceTree = "<group>";
@@ -540,6 +543,7 @@
 				52F39663C346816AAE5B5E55 /* SignInView.swift in Sources */,
 				399B8DFB007667E4D851D371 /* SkillDetailView.swift in Sources */,
 				947BC7FC90CE33B197B35BCA /* TillyApp.swift in Sources */,
+				6600B93BEF3F2715C07E14C2 /* UsageSummaryView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
