@@ -33,11 +33,20 @@ public actor SharedMemoryPool {
     }
 
     public func readAll() async throws -> [String: String] {
-        let results = try await client.search(query: "all entries", topK: 50, poolId: poolId)
+        // Use pool-scoped list via search with broad wildcard query
+        // Each pool entry was stored with "[\(key)] \(value)" format
+        let results = try await client.search(query: "pool_entry \(poolId)", topK: 50, poolId: poolId)
         var merged = localCache
         for mem in results.memories {
-            let key = mem.type ?? mem.id
-            merged[key] = mem.content
+            // Extract key from stored format "[\(key)] \(value)"
+            let content = mem.content
+            if content.hasPrefix("["), let closeBracket = content.firstIndex(of: "]") {
+                let key = String(content[content.index(after: content.startIndex)..<closeBracket])
+                let value = String(content[content.index(after: closeBracket)...]).trimmingCharacters(in: .whitespaces)
+                merged[key] = value
+            } else {
+                merged[mem.id] = content
+            }
         }
         return merged
     }

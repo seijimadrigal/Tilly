@@ -183,6 +183,106 @@ public final class MemcloudClient: @unchecked Sendable {
         return try await search(query: "session_summary recent sessions", topK: count)
     }
 
+    // MARK: - Phase 4 Endpoints (batch, pools, temporal, graph)
+
+    /// Batch sync: store multiple entries in sequential calls.
+    /// Falls back to individual stores if batch endpoint unavailable.
+    public func batchSync(entries: [MemoryEntry], provenance: Provenance? = nil) async throws -> [AddResponse] {
+        var results: [AddResponse] = []
+        for entry in entries {
+            let privacy = PrivacyFilter.classify(entry.content)
+            guard privacy != .sensitive else { continue }
+            let isDup = (try? await isDuplicate(content: entry.content)) ?? false
+            if !isDup {
+                let result = try await syncEntry(entry, provenance: provenance)
+                results.append(result)
+            }
+        }
+        return results
+    }
+
+    /// List memories in a specific pool.
+    public func listPoolMemories(poolId: String, topK: Int = 50) async throws -> SearchResponse {
+        return try await search(query: "pool_entry", topK: topK, poolId: poolId)
+    }
+
+    /// Temporal query: search memories within a time range.
+    public func searchTemporal(
+        query: String,
+        after: Date? = nil,
+        before: Date? = nil,
+        topK: Int = 10
+    ) async throws -> SearchResponse {
+        let formatter = ISO8601DateFormatter()
+        var body: [String: Any] = [
+            "query": query,
+            "user_id": config.userId,
+            "agent_id": config.agentId,
+            "top_k": topK
+        ]
+        if let after { body["after"] = formatter.string(from: after) }
+        if let before { body["before"] = formatter.string(from: before) }
+        return try await post("/memories/search/", body: body)
+    }
+
+    /// Query the knowledge graph for related entities.
+    public func queryGraph(query: String, depth: Int = 2) async throws -> GraphResponse {
+        let body: [String: Any] = [
+            "query": query,
+            "user_id": config.userId,
+            "agent_id": config.agentId,
+            "depth": depth
+        ]
+        return try await post("/graph/query", body: body)
+    }
+
+    /// Get the dynamic agent profile (MEMORY.md-like summary).
+    public func getAgentProfile() async throws -> ProfileResponse {
+        return try await get("/agents/\(config.agentId)/profile/")
+    }
+
+    /// Preview memory decay effects.
+    public func previewDecay() async throws -> DecayPreviewResponse {
+        return try await get("/decay/preview/")
+    }
+
+    // MARK: - Phase 4 Response Types
+
+    public struct GraphResponse: Codable, Sendable {
+        public let nodes: [GraphNode]?
+        public let edges: [GraphEdge]?
+        public let query: String?
+
+        public struct GraphNode: Codable, Sendable {
+            public let id: String
+            public let label: String?
+            public let type: String?
+        }
+        public struct GraphEdge: Codable, Sendable {
+            public let source: String
+            public let target: String
+            public let relationship: String?
+            public let weight: Double?
+        }
+    }
+
+    public struct ProfileResponse: Codable, Sendable {
+        public let profile: String?
+        public let updated_at: String?
+    }
+
+    public struct DecayPreviewResponse: Codable, Sendable {
+        public let memories_affected: Int?
+        public let preview: [DecayEntry]?
+
+        public struct DecayEntry: Codable, Sendable {
+            public let id: String
+            public let content: String?
+            public let current_score: Double?
+            public let projected_score: Double?
+        }
+    }
+
     // MARK: - HTTP Helpers
 
     private func get<T: Decodable>(_ path: String) async throws -> T {

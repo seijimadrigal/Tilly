@@ -49,12 +49,6 @@ public final class MemcloudAnswerTool: ToolExecutable, @unchecked Sendable {
         }
 
         do {
-            let body: [String: Any] = [
-                "question": args.question,
-                "user_id": client.config.userId,
-                "agent_id": client.config.agentId
-            ]
-            // Use the raw request method since answer endpoint isn't in MemcloudClient yet
             let results = try await client.search(query: args.question, topK: 10)
             if results.memories.isEmpty {
                 return ToolResult(content: "No relevant memories found for: \(args.question)")

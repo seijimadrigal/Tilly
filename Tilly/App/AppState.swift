@@ -93,7 +93,7 @@ final class AppState {
     ]
 
     // MARK: - Unified Memory Layer
-    var unifiedMemory: UnifiedMemoryService!
+    private(set) var unifiedMemory: UnifiedMemoryService?
     let workingMemory = WorkingMemory()
 
     // MARK: - Orchestration
@@ -189,8 +189,8 @@ final class AppState {
     private func refreshMemcloudCache() {
         memcloudFetchTask?.cancel()
         memcloudFetchTask = Task { [weak self] in
-            guard let self else { return }
-            await self.unifiedMemory.refreshCache()
+            guard let self, let unified = self.unifiedMemory else { return }
+            await unified.refreshCache()
         }
     }
 
