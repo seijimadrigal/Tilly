@@ -67,6 +67,7 @@ public final class ToolRegistry: @unchecked Sendable {
         registry.register(MemorySearchTool(service: memoryService))
         registry.register(MemoryListTool(service: memoryService))
         registry.register(MemoryDeleteTool(service: memoryService))
+        registry.register(MemoryEditTool(service: memoryService))
 
         // Memcloud tools (cloud memory)
         registry.register(MemcloudRecallTool(service: memoryService))

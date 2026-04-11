@@ -87,7 +87,7 @@ final class AppState {
     private let coreToolNames: Set<String> = [
         "execute_command", "read_file", "write_file", "edit_file", "list_directory",
         "web_search", "web_fetch", "http_request", "git",
-        "memory_store", "memory_search", "memory_list", "memory_delete",
+        "memory_store", "memory_search", "memory_list", "memory_delete", "memory_edit",
         "memcloud_recall", "memcloud_answer", "skill_run", "ask_user",
         "scratchpad_write", "scratchpad_read", "delegate_task",
     ]
@@ -1119,6 +1119,12 @@ final class AppState {
     private func offloadIfLarge(_ result: ToolResult, callID: String) -> ToolResult {
         let maxInline = 1500
         guard result.content.count > maxInline else { return result }
+
+        // Prevent infinite nesting: if this is already an offloaded reference being re-read,
+        // or if the content came from a /tmp/tilly-tool file, don't re-offload it.
+        if result.content.hasPrefix("[Full output saved:") {
+            return result
+        }
 
         let path = "/tmp/tilly-tool-\(callID.prefix(8)).txt"
         try? result.content.write(toFile: path, atomically: true, encoding: .utf8)

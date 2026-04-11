@@ -229,7 +229,7 @@ struct MarkdownTableView: View {
             // Header row
             HStack(spacing: 0) {
                 ForEach(Array(headers.enumerated()), id: \.offset) { i, header in
-                    Text(header)
+                    Text(LocalizedStringKey(header))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.primary)
                         .padding(.horizontal, 10)
@@ -248,7 +248,7 @@ struct MarkdownTableView: View {
             ForEach(Array(rows.enumerated()), id: \.offset) { rowIndex, row in
                 HStack(spacing: 0) {
                     ForEach(Array(row.prefix(headers.count).enumerated()), id: \.offset) { i, cell in
-                        Text(cell)
+                        Text(LocalizedStringKey(cell))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .textSelection(.enabled)
