@@ -29,8 +29,11 @@ struct ModelPopoverView: View {
     // Auto-test status + save
     @State private var mainAutoStatus: String?
     @State private var orchAutoStatus: String?
-    @State private var showSaved = false
     @State private var subAutoStatus: String?
+    @State private var showSaved = false
+    @State private var isSaving = false
+    @State private var saveError: String?
+    @State private var showStopStreamingAlert = false
 
     var body: some View {
         @Bindable var state = appState
@@ -164,13 +167,34 @@ struct ModelPopoverView: View {
                     Divider().padding(.horizontal, 4)
 
                     // ── Save Button ──
+                    if let error = saveError {
+                        HStack(spacing: 6) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.red)
+                            Text(error)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        }
+                        .padding(6)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.red.opacity(0.05))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+
                     Button {
-                        saveAllSettings()
+                        if appState.isStreaming {
+                            showStopStreamingAlert = true
+                        } else {
+                            Task { await verifyAndSave() }
+                        }
                     } label: {
                         HStack {
-                            Image(systemName: showSaved ? "checkmark.circle.fill" : "square.and.arrow.down.fill")
+                            if isSaving {
+                                ProgressView().controlSize(.small)
+                            }
+                            Image(systemName: showSaved ? "checkmark.circle.fill" : isSaving ? "arrow.triangle.2.circlepath" : "square.and.arrow.down.fill")
                                 .font(.subheadline)
-                            Text(showSaved ? "Saved" : "Save Configuration")
+                            Text(showSaved ? "Saved" : isSaving ? "Verifying..." : "Save Configuration")
                                 .font(.subheadline.weight(.medium))
                         }
                         .frame(maxWidth: .infinity)
@@ -178,10 +202,20 @@ struct ModelPopoverView: View {
                         .foregroundStyle(.white)
                         .background(
                             RoundedRectangle(cornerRadius: 8)
-                                .fill(showSaved ? Color.green : Color.accentColor)
+                                .fill(showSaved ? Color.green : isSaving ? Color.orange : Color.accentColor)
                         )
                     }
                     .buttonStyle(.plain)
+                    .disabled(isSaving)
+                    .alert("Active Session", isPresented: $showStopStreamingAlert) {
+                        Button("Stop & Save", role: .destructive) {
+                            appState.stopStreaming()
+                            Task { await verifyAndSave() }
+                        }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text("A session is currently running. Changing the model configuration will stop the current process. Continue?")
+                    }
                 }
                 .padding(16)
             }
@@ -432,8 +466,43 @@ struct ModelPopoverView: View {
 
     // MARK: - Helpers
 
-    private func saveAllSettings() {
-        // Sync all local state to AppState (persists to UserDefaults)
+    /// Verify all 3 models work via API test, then save if all pass.
+    private func verifyAndSave() async {
+        isSaving = true
+        saveError = nil
+        showSaved = false
+
+        // Test Main Agent provider
+        if !mainAuto {
+            await appState.testProviderConnection(appState.selectedProviderID)
+            if case .failed(let msg) = appState.providerStatuses[appState.selectedProviderID] {
+                saveError = "Main Agent failed: \(String(msg.prefix(60)))"
+                isSaving = false
+                return
+            }
+        }
+
+        // Test Orchestrator provider
+        if !orchAuto {
+            await appState.testProviderConnection(orchProvider)
+            if case .failed(let msg) = appState.providerStatuses[orchProvider] {
+                saveError = "Orchestrator failed: \(String(msg.prefix(60)))"
+                isSaving = false
+                return
+            }
+        }
+
+        // Test Sub-Agent provider
+        if !subAuto {
+            await appState.testProviderConnection(subProvider)
+            if case .failed(let msg) = appState.providerStatuses[subProvider] {
+                saveError = "Sub-Agent failed: \(String(msg.prefix(60)))"
+                isSaving = false
+                return
+            }
+        }
+
+        // All tests passed — save configuration
         appState.mainAgentAuto = mainAuto
         appState.orchestratorAuto = orchAuto
         appState.subAgentAuto = subAuto
@@ -444,8 +513,9 @@ struct ModelPopoverView: View {
         appState.saveProviderSelection()
         appState.setupOrchestration()
 
-        DiagnosticLogger.shared.log(.system, "Config saved — Main: \(appState.selectedProviderID.displayName)/\(appState.selectedModelID), Orch: \(orchProvider.displayName)/\(orchModel), Sub: \(subProvider.displayName)/\(subModel)")
+        DiagnosticLogger.shared.log(.system, "Config verified & saved — Main: \(appState.selectedProviderID.displayName)/\(appState.selectedModelID), Orch: \(orchProvider.displayName)/\(orchModel), Sub: \(subProvider.displayName)/\(subModel)")
 
+        isSaving = false
         showSaved = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { showSaved = false }
     }
