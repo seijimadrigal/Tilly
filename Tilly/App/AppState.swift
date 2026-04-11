@@ -144,6 +144,20 @@ final class AppState {
         set { UserDefaults.standard.set(newValue, forKey: "subAgentModelID") }
     }
 
+    // MARK: - Auto Selection
+    var mainAgentAuto: Bool {
+        get { UserDefaults.standard.bool(forKey: "mainAgentAuto") }
+        set { UserDefaults.standard.set(newValue, forKey: "mainAgentAuto") }
+    }
+    var orchestratorAuto: Bool {
+        get { UserDefaults.standard.bool(forKey: "orchestratorAuto") }
+        set { UserDefaults.standard.set(newValue, forKey: "orchestratorAuto") }
+    }
+    var subAgentAuto: Bool {
+        get { UserDefaults.standard.bool(forKey: "subAgentAuto") }
+        set { UserDefaults.standard.set(newValue, forKey: "subAgentAuto") }
+    }
+
     // MARK: - Connection Status
     var providerStatuses: [ProviderID: ConnectionStatus] = [:]
 
