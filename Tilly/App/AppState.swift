@@ -713,8 +713,40 @@ final class AppState {
 
         isStreaming = true
 
+        // ── Orchestration: Triage classification ──
+        var effectiveProvider = provider
+        var effectiveModel = selectedModelID
+
+        if triageEnabled, let router = triageRouter {
+            do {
+                let context = session.messages.suffix(4).map { $0.textContent }.joined(separator: "\n")
+                let classification = try await router.classify(userMessage: text, context: context)
+                DiagnosticLogger.shared.log(.agent, "Triage: \(classification.route) (complexity: \(String(format: "%.1f", classification.complexity)), reason: \(classification.reason))")
+
+                // Auto-route to different model based on complexity
+                if autoRouting {
+                    let route = modelRouter.route(complexity: classification.complexity)
+                    if let routedProvider = providers[route.providerID] {
+                        effectiveProvider = routedProvider
+                        effectiveModel = route.modelID
+                        DiagnosticLogger.shared.log(.agent, "Model routed: \(route.providerID.displayName)/\(route.modelID) (\(route.reason))")
+                    }
+                }
+            } catch {
+                DiagnosticLogger.shared.error("Triage failed: \(error.localizedDescription) — using main agent")
+            }
+        }
+
+        // Temporarily switch model if auto-routed
+        let originalProvider = selectedProviderID
+        let originalModel = selectedModelID
+        if effectiveModel != originalModel {
+            selectedProviderID = effectiveProvider.id
+            selectedModelID = effectiveModel
+        }
+
         do {
-            try await runAgentLoop(session: &session, provider: provider)
+            try await runAgentLoop(session: &session, provider: effectiveProvider)
         } catch {
             if !(error is CancellationError) {
                 DiagnosticLogger.shared.error("Agent loop error: \(error.localizedDescription)", detail: String(describing: error))
@@ -724,6 +756,31 @@ final class AppState {
                 )
                 session.appendMessage(errorMessage)
                 updateCurrentSession(session)
+            }
+        }
+
+        // Restore original model if it was auto-routed
+        if effectiveModel != originalModel {
+            selectedProviderID = originalProvider
+            selectedModelID = originalModel
+        }
+
+        // ── Orchestration: Reflection ──
+        if reflectionEnabled, let reflector = reflectionAgent,
+           let lastAssistant = session.messages.last(where: { $0.role == .assistant }) {
+            let response = lastAssistant.textContent
+            if !response.isEmpty {
+                let toolsUsed = session.messages
+                    .compactMap { $0.toolCalls }
+                    .flatMap { $0 }
+                    .map { $0.function.name }
+                let uniqueTools = Array(Set(toolsUsed))
+                do {
+                    let reflection = try await reflector.critique(userRequest: text, agentResponse: response, toolsUsed: uniqueTools)
+                    DiagnosticLogger.shared.log(.agent, "Reflection: score=\(String(format: "%.1f", reflection.score)), acceptable=\(reflection.isAcceptable), issues=\(reflection.issues.joined(separator: ", "))")
+                } catch {
+                    DiagnosticLogger.shared.error("Reflection failed: \(error.localizedDescription)")
+                }
             }
         }
 

@@ -26,9 +26,10 @@ struct ModelPopoverView: View {
     @State private var isLoadingOrch = false
     @State private var isLoadingSub = false
 
-    // Auto-test status
+    // Auto-test status + save
     @State private var mainAutoStatus: String?
     @State private var orchAutoStatus: String?
+    @State private var showSaved = false
     @State private var subAutoStatus: String?
 
     var body: some View {
@@ -159,11 +160,33 @@ struct ModelPopoverView: View {
                         Toggle("Enable reflection", isOn: Binding(get: { appState.reflectionEnabled }, set: { appState.reflectionEnabled = $0 }))
                             .font(.subheadline)
                     }
+
+                    Divider().padding(.horizontal, 4)
+
+                    // ── Save Button ──
+                    Button {
+                        saveAllSettings()
+                    } label: {
+                        HStack {
+                            Image(systemName: showSaved ? "checkmark.circle.fill" : "square.and.arrow.down.fill")
+                                .font(.subheadline)
+                            Text(showSaved ? "Saved" : "Save Configuration")
+                                .font(.subheadline.weight(.medium))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .foregroundStyle(.white)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(showSaved ? Color.green : Color.accentColor)
+                        )
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding(16)
             }
         }
-        .frame(width: 340, height: 580)
+        .frame(width: 340, height: 620)
         .onAppear {
             mainAuto = appState.mainAgentAuto
             orchAuto = appState.orchestratorAuto
@@ -408,6 +431,24 @@ struct ModelPopoverView: View {
     }
 
     // MARK: - Helpers
+
+    private func saveAllSettings() {
+        // Sync all local state to AppState (persists to UserDefaults)
+        appState.mainAgentAuto = mainAuto
+        appState.orchestratorAuto = orchAuto
+        appState.subAgentAuto = subAuto
+        appState.orchestratorProviderID = orchProvider
+        appState.orchestratorModelID = orchModel
+        appState.subAgentProviderID = subProvider
+        appState.subAgentModelID = subModel
+        appState.saveProviderSelection()
+        appState.setupOrchestration()
+
+        DiagnosticLogger.shared.log(.system, "Config saved — Main: \(appState.selectedProviderID.displayName)/\(appState.selectedModelID), Orch: \(orchProvider.displayName)/\(orchModel), Sub: \(subProvider.displayName)/\(subModel)")
+
+        showSaved = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { showSaved = false }
+    }
 
     private func statusColor(for provider: ProviderID) -> Color {
         switch appState.providerStatuses[provider] {
