@@ -11,10 +11,14 @@ struct ModelAutoRec {
 struct ModelPopoverView: View {
     @Environment(AppState.self) private var appState
 
-    // Local state for auto toggles (synced to AppState on change)
+    // Local state synced to AppState (UserDefaults-backed props don't trigger @Observable)
     @State private var mainAuto: Bool = false
     @State private var orchAuto: Bool = false
     @State private var subAuto: Bool = false
+    @State private var orchProvider: ProviderID = .zai
+    @State private var orchModel: String = "glm-4-flash"
+    @State private var subProvider: ProviderID = .zaiCoding
+    @State private var subModel: String = "glm-5.1"
 
     // Models fetched per-role
     @State private var orchModels: [ModelInfo] = []
@@ -85,25 +89,24 @@ struct ModelPopoverView: View {
                         tier: .flash,
                         isAuto: $orchAuto,
                         autoStatus: orchAutoStatus,
-                        providerBinding: Binding(
-                            get: { appState.orchestratorProviderID },
-                            set: { appState.orchestratorProviderID = $0 }
-                        ),
-                        modelBinding: Binding(
-                            get: { appState.orchestratorModelID },
-                            set: { appState.orchestratorModelID = $0 }
-                        ),
+                        providerBinding: $orchProvider,
+                        modelBinding: $orchModel,
                         models: orchModels,
                         isLoading: isLoadingOrch,
                         onProviderChange: {
-                            autoSelectDefault(for: appState.orchestratorProviderID, into: Binding(get: { appState.orchestratorModelID }, set: { appState.orchestratorModelID = $0 }))
+                            appState.orchestratorProviderID = orchProvider
+                            autoSelectDefault(for: orchProvider, into: &orchModel)
+                            appState.orchestratorModelID = orchModel
                             appState.setupOrchestration()
-                            Task { isLoadingOrch = true; orchModels = await appState.loadModels(for: appState.orchestratorProviderID); isLoadingOrch = false }
+                            Task { isLoadingOrch = true; orchModels = await appState.loadModels(for: orchProvider); isLoadingOrch = false }
                         },
-                        onModelChange: { appState.setupOrchestration() },
+                        onModelChange: {
+                            appState.orchestratorModelID = orchModel
+                            appState.setupOrchestration()
+                        },
                         onAutoToggle: { on in
                             appState.orchestratorAuto = on
-                            if on { Task { await autoSelectWithTest(tier: .flash, setProvider: { appState.orchestratorProviderID = $0 }, setModel: { appState.orchestratorModelID = $0 }, setStatus: { orchAutoStatus = $0 }, postAction: { appState.setupOrchestration(); Task { isLoadingOrch = true; orchModels = await appState.loadModels(for: appState.orchestratorProviderID); isLoadingOrch = false } }) } }
+                            if on { Task { await autoSelectWithTest(tier: .flash, setProvider: { orchProvider = $0; appState.orchestratorProviderID = $0 }, setModel: { orchModel = $0; appState.orchestratorModelID = $0 }, setStatus: { orchAutoStatus = $0 }, postAction: { appState.setupOrchestration(); Task { isLoadingOrch = true; orchModels = await appState.loadModels(for: orchProvider); isLoadingOrch = false } }) } }
                         }
                     )
 
@@ -118,24 +121,22 @@ struct ModelPopoverView: View {
                         tier: .standard,
                         isAuto: $subAuto,
                         autoStatus: subAutoStatus,
-                        providerBinding: Binding(
-                            get: { appState.subAgentProviderID },
-                            set: { appState.subAgentProviderID = $0 }
-                        ),
-                        modelBinding: Binding(
-                            get: { appState.subAgentModelID },
-                            set: { appState.subAgentModelID = $0 }
-                        ),
+                        providerBinding: $subProvider,
+                        modelBinding: $subModel,
                         models: subModels,
                         isLoading: isLoadingSub,
                         onProviderChange: {
-                            autoSelectDefault(for: appState.subAgentProviderID, into: Binding(get: { appState.subAgentModelID }, set: { appState.subAgentModelID = $0 }))
-                            Task { isLoadingSub = true; subModels = await appState.loadModels(for: appState.subAgentProviderID); isLoadingSub = false }
+                            appState.subAgentProviderID = subProvider
+                            autoSelectDefault(for: subProvider, into: &subModel)
+                            appState.subAgentModelID = subModel
+                            Task { isLoadingSub = true; subModels = await appState.loadModels(for: subProvider); isLoadingSub = false }
                         },
-                        onModelChange: {},
+                        onModelChange: {
+                            appState.subAgentModelID = subModel
+                        },
                         onAutoToggle: { on in
                             appState.subAgentAuto = on
-                            if on { Task { await autoSelectWithTest(tier: .standard, setProvider: { appState.subAgentProviderID = $0 }, setModel: { appState.subAgentModelID = $0 }, setStatus: { subAutoStatus = $0 }, postAction: { Task { isLoadingSub = true; subModels = await appState.loadModels(for: appState.subAgentProviderID); isLoadingSub = false } }) } }
+                            if on { Task { await autoSelectWithTest(tier: .standard, setProvider: { subProvider = $0; appState.subAgentProviderID = $0 }, setModel: { subModel = $0; appState.subAgentModelID = $0 }, setStatus: { subAutoStatus = $0 }, postAction: { Task { isLoadingSub = true; subModels = await appState.loadModels(for: subProvider); isLoadingSub = false } }) } }
                         }
                     )
 
@@ -167,6 +168,10 @@ struct ModelPopoverView: View {
             mainAuto = appState.mainAgentAuto
             orchAuto = appState.orchestratorAuto
             subAuto = appState.subAgentAuto
+            orchProvider = appState.orchestratorProviderID
+            orchModel = appState.orchestratorModelID
+            subProvider = appState.subAgentProviderID
+            subModel = appState.subAgentModelID
         }
         .task {
             await appState.loadModels()
