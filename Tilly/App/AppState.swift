@@ -420,15 +420,40 @@ final class AppState {
 
     private func setupConsolidationHandler() {
         toolRegistry.memcloudConsolidateTool?.consolidationHandler = { [weak self] prompt in
-            // Simple pass-through — the consolidation tool will handle the LLM call
-            // In a full implementation, this would use SubAgentRunner
-            return prompt
+            guard let self else { return "Consolidation unavailable" }
+            return await self.runLightweightLLMCall(prompt: prompt, role: "memory consolidator")
         }
     }
 
     private func setupSuggestSkillsHandler() {
         toolRegistry.memcloudSuggestSkillsTool?.analysisHandler = { [weak self] prompt in
-            return prompt
+            guard let self else { return "Analysis unavailable" }
+            return await self.runLightweightLLMCall(prompt: prompt, role: "skill pattern analyzer")
+        }
+    }
+
+    /// Run a single non-streaming LLM call using the orchestrator model (cheap/fast).
+    private func runLightweightLLMCall(prompt: String, role: String) async -> String {
+        let providerID = orchestratorProviderID
+        let modelID = orchestratorModelID
+        guard let provider = providers[providerID] ?? currentProvider else { return "No provider available" }
+
+        let request = ChatCompletionRequest(
+            model: modelID,
+            messages: [
+                ChatCompletionRequest.ChatMessage(role: "system", content: "You are a \(role). Be concise and specific."),
+                ChatCompletionRequest.ChatMessage(role: "user", content: String(prompt.prefix(4000)))
+            ],
+            maxTokens: 1000,
+            stream: false
+        )
+
+        do {
+            let response = try await provider.complete(request)
+            return response.choices.first?.message.content ?? "No response"
+        } catch {
+            DiagnosticLogger.shared.error("Lightweight LLM call failed (\(role)): \(error.localizedDescription)")
+            return "Analysis failed: \(error.localizedDescription)"
         }
     }
 
