@@ -56,9 +56,10 @@ public struct TriageRouter: Sendable {
     }
 
     private func parseClassification(_ text: String) -> Classification {
-        guard let data = text.data(using: .utf8),
+        let cleaned = extractJSON(text)
+        guard let data = cleaned.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            return Classification(route: .direct, complexity: 0.3, reason: "Parse failed")
+            return Classification(route: .direct, complexity: 0.3, reason: "Parse failed: \(String(text.prefix(80)))")
         }
 
         let routeStr = json["route"] as? String ?? "direct"
@@ -80,5 +81,18 @@ public struct TriageRouter: Sendable {
         }
 
         return Classification(route: route, complexity: complexity, reason: reason)
+    }
+
+    /// Strip markdown fences and extract the JSON object from LLM output.
+    private func extractJSON(_ text: String) -> String {
+        let cleaned = text
+            .replacingOccurrences(of: "```json", with: "")
+            .replacingOccurrences(of: "```", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleaned.hasPrefix("{") { return cleaned }
+        if let range = cleaned.range(of: "\\{[^}]+\\}", options: .regularExpression) {
+            return String(cleaned[range])
+        }
+        return cleaned
     }
 }

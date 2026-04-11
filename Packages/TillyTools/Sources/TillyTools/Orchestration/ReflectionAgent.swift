@@ -51,21 +51,27 @@ public struct ReflectionAgent: Sendable {
 
         let response = try await provider.complete(request)
         guard let text = response.choices.first?.message.content else {
-            return ReflectionResult(isAcceptable: true, score: 0.7, issues: [], suggestion: nil)
+            return ReflectionResult(isAcceptable: false, score: 0.5, issues: ["No reflection response from model"], suggestion: nil)
         }
 
         return parseReflection(text)
     }
 
     private func parseReflection(_ text: String) -> ReflectionResult {
-        let cleaned = text
+        var cleaned = text
             .replacingOccurrences(of: "```json", with: "")
             .replacingOccurrences(of: "```", with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
+        // Extract JSON if LLM added extra text around it
+        if !cleaned.hasPrefix("{"),
+           let range = cleaned.range(of: "\\{[^}]+\\}", options: .regularExpression) {
+            cleaned = String(cleaned[range])
+        }
+
         guard let data = cleaned.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            return ReflectionResult(isAcceptable: true, score: 0.7, issues: [], suggestion: nil)
+            return ReflectionResult(isAcceptable: false, score: 0.5, issues: ["Failed to parse reflection response"], suggestion: nil)
         }
 
         let acceptable = json["acceptable"] as? Bool ?? true

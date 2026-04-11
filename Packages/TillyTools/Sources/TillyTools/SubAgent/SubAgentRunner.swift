@@ -51,7 +51,27 @@ public final class SubAgentRunner: @unchecked Sendable {
             do {
                 response = try await provider.complete(request)
             } catch {
-                // LLM call failed — return whatever we have so far
+                let errMsg = error.localizedDescription.lowercased()
+                let isToolError = errMsg.contains("tool") || errMsg.contains("function")
+                    || errMsg.contains("not supported") || errMsg.contains("400")
+                    || errMsg.contains("422") || errMsg.contains("404")
+
+                // If tools caused the error, retry once without tools (pure text mode)
+                if isToolError && !toolDefinitions.isEmpty && round == 0 {
+                    let noToolRequest = ChatCompletionRequest(
+                        model: model,
+                        messages: messages,
+                        stream: false,
+                        streamOptions: nil,
+                        tools: nil
+                    )
+                    if let fallback = try? await provider.complete(noToolRequest),
+                       let text = fallback.choices.first?.message.content, !text.isEmpty {
+                        return text
+                    }
+                }
+
+                // Return whatever we have so far
                 if !accumulatedText.isEmpty { return accumulatedText }
                 if !toolResultsSummary.isEmpty {
                     return "Sub-agent completed \(round) rounds. Tool results:\n" + toolResultsSummary.joined(separator: "\n")

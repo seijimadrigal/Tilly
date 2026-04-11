@@ -95,6 +95,11 @@ final class AppState {
     // MARK: - Unified Memory Layer
     private(set) var unifiedMemory: UnifiedMemoryService?
     let workingMemory = WorkingMemory()
+    private var workingMemorySummary: String = "(empty)"
+
+    private func refreshWorkingMemorySummary() async {
+        workingMemorySummary = await workingMemory.summary(maxChars: 600)
+    }
 
     // MARK: - Orchestration
     private var triageRouter: TriageRouter?
@@ -474,7 +479,19 @@ final class AppState {
         } else {
             return "Error: No LLM provider configured"
         }
-        let modelID = subAgentModelID
+        // Validate model ID matches provider format
+        let modelID: String
+        let rawModelID = subAgentModelID
+        if subAgentProviderID == .openRouter && !rawModelID.contains("/") {
+            let fallback = providerConfigs.first(where: { $0.providerID == .openRouter })?.defaultModel ?? "anthropic/claude-sonnet-4"
+            DiagnosticLogger.shared.log(.agent, "Sub-agent model '\(rawModelID)' invalid for OpenRouter, using '\(fallback)'")
+            modelID = fallback
+        } else if (subAgentProviderID == .zai || subAgentProviderID == .zaiCoding) && rawModelID.contains("/") {
+            let fallback = providerConfigs.first(where: { $0.providerID == subAgentProviderID })?.defaultModel ?? "glm-4-flash"
+            modelID = fallback
+        } else {
+            modelID = rawModelID
+        }
 
         DiagnosticLogger.shared.log(.agent, "[Sub-Agent: \(subAgentProviderID.displayName)/\(modelID)] Spawning role=\(role), task=\(String(task.prefix(80)))...")
 
@@ -774,6 +791,10 @@ final class AppState {
             selectedProviderID = effectiveProvider.id
             selectedModelID = effectiveModel
         }
+
+        // Store task context in working memory
+        await workingMemory.set(key: "current_task", value: String(text.prefix(300)))
+        await refreshWorkingMemorySummary()
 
         do {
             DiagnosticLogger.shared.log(.agent, "[Main Agent: \(effectiveProvider.id.displayName)/\(effectiveModel)] Starting agent loop")
@@ -1591,6 +1612,9 @@ final class AppState {
 
         **Scratchpad** (session working memory):
         \(scratchpad.isEmpty ? "(empty)" : scratchpad)
+
+        **Working Memory** (current task context):
+        \(workingMemorySummary)
 
         **Memory** (\(memoryCount) local — use memory_search for local, memcloud_recall/memcloud_answer for cloud):
         \(recentMemories.isEmpty ? "(none)" : recentMemories)

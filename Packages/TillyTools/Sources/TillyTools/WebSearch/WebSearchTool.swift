@@ -38,9 +38,24 @@ public final class WebSearchTool: ToolExecutable, @unchecked Sendable {
         let args = try JSONDecoder().decode(Args.self, from: data)
         let maxResults = min(args.num_results ?? 5, 20)
 
+        let isAdvanced = (args.search_depth ?? "basic") == "advanced"
+        let braveCount = isAdvanced ? max(maxResults, 15) : maxResults
+
         // Try Brave Search first
-        let braveResult = await braveSearch(query: args.query, count: maxResults)
-        if !braveResult.isError { return braveResult }
+        let braveResult = await braveSearch(query: args.query, count: braveCount, freshness: isAdvanced ? "pw" : nil)
+        if !braveResult.isError {
+            // For advanced: if Brave returned few results, enrich with Tavily
+            if isAdvanced {
+                let resultLines = braveResult.content.components(separatedBy: "\n").filter { $0.contains("http") }
+                if resultLines.count < 3 {
+                    let tavilyResult = await tavilySearch(query: args.query, maxResults: maxResults, depth: "advanced")
+                    if !tavilyResult.isError {
+                        return ToolResult(content: braveResult.content + "\n--- Additional results ---\n\n" + tavilyResult.content)
+                    }
+                }
+            }
+            return braveResult
+        }
 
         // Fallback to Tavily
         let tavilyResult = await tavilySearch(query: args.query, maxResults: maxResults, depth: args.search_depth ?? "basic")
@@ -52,9 +67,11 @@ public final class WebSearchTool: ToolExecutable, @unchecked Sendable {
 
     // MARK: - Brave Search (primary)
 
-    private func braveSearch(query: String, count: Int) async -> ToolResult {
+    private func braveSearch(query: String, count: Int, freshness: String? = nil) async -> ToolResult {
         let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
-        guard let url = URL(string: "https://api.search.brave.com/res/v1/web/search?q=\(encoded)&count=\(count)") else {
+        var urlString = "https://api.search.brave.com/res/v1/web/search?q=\(encoded)&count=\(count)"
+        if let freshness { urlString += "&freshness=\(freshness)" }
+        guard let url = URL(string: urlString) else {
             return ToolResult(content: "Invalid query", isError: true)
         }
 
