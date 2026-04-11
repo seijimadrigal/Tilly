@@ -8,6 +8,8 @@ public enum ProviderID: String, Codable, Sendable, CaseIterable, Identifiable {
     case moonshot = "moonshot"
     case zai = "zai"
     case zaiCoding = "zai_coding"
+    case google = "google"
+    case xai = "xai"
 
     public var id: String { rawValue }
 
@@ -20,11 +22,39 @@ public enum ProviderID: String, Codable, Sendable, CaseIterable, Identifiable {
         case .moonshot: return "Kimi (Moonshot)"
         case .zai: return "ZAI (Zhipu AI)"
         case .zaiCoding: return "ZAI Coding"
+        case .google: return "Google Gemini"
+        case .xai: return "xAI Grok"
         }
     }
 
     public var requiresAPIKey: Bool {
         self != .ollama
+    }
+
+    public var icon: String {
+        switch self {
+        case .openRouter: return "arrow.triangle.branch"
+        case .ollama: return "desktopcomputer"
+        case .dashScope: return "cloud.fill"
+        case .deepSeek: return "magnifyingglass.circle.fill"
+        case .moonshot: return "moon.fill"
+        case .zai: return "cpu.fill"
+        case .zaiCoding: return "chevron.left.forwardslash.chevron.right"
+        case .google: return "sparkle"
+        case .xai: return "bolt.circle.fill"
+        }
+    }
+}
+
+public enum ConnectionStatus: Sendable, Equatable {
+    case untested
+    case testing
+    case connected(modelCount: Int)
+    case failed(String)
+
+    public var isConnected: Bool {
+        if case .connected = self { return true }
+        return false
     }
 }
 

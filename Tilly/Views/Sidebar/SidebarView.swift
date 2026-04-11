@@ -34,6 +34,20 @@ struct SidebarView: View {
     @State private var skills: [SkillEntry] = []
     @State private var credentials: [KeychainCredential] = []
 
+    private var providerStatusColor: Color {
+        switch appState.providerStatuses[appState.selectedProviderID] {
+        case .connected: return .green
+        case .failed: return .red
+        case .testing: return .yellow
+        case .untested, .none:
+            let id = appState.selectedProviderID
+            if !id.requiresAPIKey || appState.keychainService.hasAPIKey(for: id) {
+                return .yellow
+            }
+            return .gray
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -47,18 +61,28 @@ struct SidebarView: View {
                 Spacer()
 
                 Button { showModelPopover.toggle() } label: {
-                    HStack(spacing: 3) {
-                        Image(systemName: "cpu")
-                            .font(.caption2)
+                    HStack(spacing: 4) {
+                        // Status dot
+                        Circle()
+                            .fill(providerStatusColor)
+                            .frame(width: 6, height: 6)
+                        Image(systemName: appState.selectedProviderID.icon)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
                         Text(appState.selectedModelID)
                             .font(.caption2)
                             .lineLimit(1)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 8))
+                            .foregroundStyle(.tertiary)
                     }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(Capsule().fill(Color.gray.opacity(0.15)))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(Color(.controlBackgroundColor).opacity(0.6)))
+                    .overlay(Capsule().stroke(Color.gray.opacity(0.15), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
+                .help("\(appState.selectedProviderID.displayName) — \(appState.selectedModelID)")
                 .popover(isPresented: $showModelPopover) {
                     ModelPopoverView().environment(appState)
                 }

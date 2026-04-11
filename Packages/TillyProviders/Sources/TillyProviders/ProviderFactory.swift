@@ -21,6 +21,10 @@ public enum ProviderFactory {
             return ZAIProvider(configuration: config, keychain: keychain)
         case .zaiCoding:
             return ZAIProvider(configuration: config, keychain: keychain)
+        case .google:
+            return OpenAICompatibleProvider(configuration: config, keychain: keychain)
+        case .xai:
+            return OpenAICompatibleProvider(configuration: config, keychain: keychain)
         }
     }
 }

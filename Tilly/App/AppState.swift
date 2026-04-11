@@ -118,6 +118,35 @@ final class AppState {
     private let modelRouter = ModelRouter()
     let usageTracker = UsageTracker()
 
+    // MARK: - Orchestrator & Sub-Agent Model Selection
+    var orchestratorProviderID: ProviderID {
+        get {
+            guard let raw = UserDefaults.standard.string(forKey: "orchestratorProviderID"),
+                  let id = ProviderID(rawValue: raw) else { return .zai }
+            return id
+        }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: "orchestratorProviderID") }
+    }
+    var orchestratorModelID: String {
+        get { UserDefaults.standard.string(forKey: "orchestratorModelID") ?? "glm-4-flash" }
+        set { UserDefaults.standard.set(newValue, forKey: "orchestratorModelID") }
+    }
+    var subAgentProviderID: ProviderID {
+        get {
+            guard let raw = UserDefaults.standard.string(forKey: "subAgentProviderID"),
+                  let id = ProviderID(rawValue: raw) else { return selectedProviderID }
+            return id
+        }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: "subAgentProviderID") }
+    }
+    var subAgentModelID: String {
+        get { UserDefaults.standard.string(forKey: "subAgentModelID") ?? selectedModelID }
+        set { UserDefaults.standard.set(newValue, forKey: "subAgentModelID") }
+    }
+
+    // MARK: - Connection Status
+    var providerStatuses: [ProviderID: ConnectionStatus] = [:]
+
     // MARK: - Memcloud Cache
     private var memcloudFetchTask: Task<Void, Never>?
 
@@ -170,19 +199,16 @@ final class AppState {
         DiagnosticLogger.shared.log(.system, "Memcloud sync enabled for user \(NSUserName())")
     }
 
-    private func setupOrchestration() {
-        // Triage router — uses cheapest model (ZAI flash) for classification
-        if let zaiProvider = providers[.zai] {
-            triageRouter = TriageRouter(provider: zaiProvider, routingModel: "glm-4-flash")
-            planExecutor = PlanExecutor(provider: zaiProvider, model: "glm-4-flash")
-            reflectionAgent = ReflectionAgent(provider: zaiProvider, model: "glm-4-flash")
-            DiagnosticLogger.shared.log(.system, "Orchestration layer initialized (triage + plan + reflection)")
-        } else if let defaultProvider = providers[selectedProviderID] {
-            // Fallback to default provider
-            triageRouter = TriageRouter(provider: defaultProvider, routingModel: selectedModelID)
-            planExecutor = PlanExecutor(provider: defaultProvider, model: selectedModelID)
-            reflectionAgent = ReflectionAgent(provider: defaultProvider, model: selectedModelID)
-            DiagnosticLogger.shared.log(.system, "Orchestration layer initialized with fallback provider")
+    func setupOrchestration() {
+        // Use configurable orchestrator provider + model
+        let orchProvider = providers[orchestratorProviderID] ?? providers[selectedProviderID]
+        let orchModel = orchestratorModelID
+
+        if let provider = orchProvider {
+            triageRouter = TriageRouter(provider: provider, routingModel: orchModel)
+            planExecutor = PlanExecutor(provider: provider, model: orchModel)
+            reflectionAgent = ReflectionAgent(provider: provider, model: orchModel)
+            DiagnosticLogger.shared.log(.system, "Orchestration: \(orchestratorProviderID.displayName)/\(orchModel)")
         }
     }
 
@@ -400,9 +426,16 @@ final class AppState {
     }
 
     private func runSubAgent(task: String, role: String, allowedTools: [String]?, maxRounds: Int) async -> String {
-        guard let provider = currentProvider else {
+        // Use configurable sub-agent provider, fallback to current
+        let provider: any LLMProvider
+        if let subProvider = providers[subAgentProviderID] {
+            provider = subProvider
+        } else if let current = currentProvider {
+            provider = current
+        } else {
             return "Error: No LLM provider configured"
         }
+        let modelID = subAgentModelID
 
         // Build restricted tool set for the sub-agent
         let defaultToolNames = ["web_search", "web_fetch", "http_request", "read_file", "list_directory", "execute_command", "edit_file", "git", "scratchpad_write", "scratchpad_read"]
@@ -438,7 +471,7 @@ final class AppState {
 
         let runner = SubAgentRunner(
             provider: provider,
-            model: selectedModelID,
+            model: modelID,
             tools: subTools,
             maxRounds: maxRounds,
             systemPrompt: subPrompt
@@ -534,6 +567,36 @@ final class AppState {
         } catch {
             availableModels = []
             print("Failed to load models: \(error.localizedDescription)")
+        }
+    }
+
+    /// Load models for a specific provider (not just the selected one).
+    func loadModels(for providerID: ProviderID) async -> [ModelInfo] {
+        guard let provider = providers[providerID] else { return [] }
+        return (try? await provider.listModels()) ?? []
+    }
+
+    /// Test a provider's connection by calling listModels().
+    func testProviderConnection(_ providerID: ProviderID) async {
+        providerStatuses[providerID] = .testing
+        guard let provider = providers[providerID] else {
+            providerStatuses[providerID] = .failed("Provider not initialized")
+            return
+        }
+        do {
+            let models = try await provider.listModels()
+            providerStatuses[providerID] = .connected(modelCount: models.count)
+        } catch {
+            providerStatuses[providerID] = .failed(error.localizedDescription)
+        }
+    }
+
+    /// Test all configured providers.
+    func testAllProviders() async {
+        for providerID in ProviderID.allCases {
+            if providers[providerID] != nil {
+                await testProviderConnection(providerID)
+            }
         }
     }
 

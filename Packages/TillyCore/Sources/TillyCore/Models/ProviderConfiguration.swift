@@ -75,5 +75,17 @@ public struct ProviderConfiguration: Codable, Sendable, Identifiable, Equatable 
             baseURL: URL(string: "https://api.z.ai/api/coding/paas/v4")!,
             defaultModel: "glm-5.1"
         ),
+        ProviderConfiguration(
+            providerID: .google,
+            displayName: "Google Gemini",
+            baseURL: URL(string: "https://generativelanguage.googleapis.com/v1beta/openai")!,
+            defaultModel: "gemini-2.5-flash"
+        ),
+        ProviderConfiguration(
+            providerID: .xai,
+            displayName: "xAI Grok",
+            baseURL: URL(string: "https://api.x.ai/v1")!,
+            defaultModel: "grok-3-mini"
+        ),
     ]
 }
