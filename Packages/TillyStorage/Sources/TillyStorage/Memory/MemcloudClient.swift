@@ -183,6 +183,143 @@ public final class MemcloudClient: @unchecked Sendable {
         return try await search(query: "session_summary recent sessions", topK: count)
     }
 
+    // MARK: - Phase 5 Endpoints (traces, consolidate, stale, contradictions)
+
+    /// Capture a tool execution trace for procedural memory extraction.
+    public func captureTrace(
+        sessionId: String,
+        task: String,
+        toolCalls: [[String: Any]],
+        outcome: String,
+        durationMs: Int
+    ) async throws -> TraceResponse {
+        let toolNames = toolCalls.compactMap { $0["tool"] as? String }
+        let body: [String: Any] = [
+            "user_id": config.userId,
+            "agent_id": config.agentId,
+            "session_id": sessionId,
+            "trace": [
+                "task": task,
+                "tools_used": toolNames,
+                "tool_calls": toolCalls,
+                "outcome": outcome,
+                "duration_ms": durationMs
+            ]
+        ]
+        return try await post("/traces", body: body)
+    }
+
+    /// Server-side memory consolidation (dream mode).
+    public func consolidateServer(
+        scope: String = "duplicates",
+        threshold: Double = 0.85,
+        dryRun: Bool = true,
+        limit: Int = 50
+    ) async throws -> ConsolidateResponse {
+        let body: [String: Any] = [
+            "user_id": config.userId,
+            "scope": scope,
+            "threshold": threshold,
+            "dry_run": dryRun,
+            "limit": limit
+        ]
+        return try await post("/memories/consolidate", body: body)
+    }
+
+    /// Get stale memories that should be reviewed or archived.
+    public func getStaleMemories(
+        threshold: Double = 0.2,
+        minAgeDays: Int = 7,
+        limit: Int = 50
+    ) async throws -> StaleResponse {
+        return try await get("/memories/stale?user_id=\(config.userId)&threshold=\(threshold)&min_age_days=\(minAgeDays)&limit=\(limit)")
+    }
+
+    /// Check for contradictions between a new fact and existing memories.
+    public func checkContradictions(
+        text: String? = nil,
+        entity: String? = nil,
+        limit: Int = 20
+    ) async throws -> ContradictionResponse {
+        var body: [String: Any] = [
+            "user_id": config.userId,
+            "limit": limit
+        ]
+        if let text { body["text"] = text }
+        if let entity { body["entity"] = entity }
+        return try await post("/memories/check-contradictions", body: body)
+    }
+
+    // MARK: - Phase 5 Response Types
+
+    public struct TraceResponse: Codable, Sendable {
+        public let status: String?
+        public let trace_id: String?
+        public let memories_created: Int?
+        public let counts: [String: Int]?
+        public let memory_ids: [String]?
+    }
+
+    public struct ConsolidateResponse: Codable, Sendable {
+        public let scanned: Int?
+        public let duplicate_groups: [DuplicateGroup]?
+        public let stale_candidates: [StaleCandidateEntry]?
+        public let actions_taken: [String: Int]?
+
+        public struct DuplicateGroup: Codable, Sendable {
+            public let group_id: Int?
+            public let memories: [GroupMemory]?
+            public let suggested_merge: String?
+
+            public struct GroupMemory: Codable, Sendable {
+                public let id: String
+                public let content: String
+                public let score: Double?
+            }
+        }
+
+        public struct StaleCandidateEntry: Codable, Sendable {
+            public let id: String
+            public let content: String?
+            public let stale_reason: String?
+        }
+    }
+
+    public struct StaleResponse: Codable, Sendable {
+        public let total_stale: Int?
+        public let by_reason: [String: Int]?
+        public let candidates: [StaleCandidate]?
+
+        public struct StaleCandidate: Codable, Sendable {
+            public let id: String
+            public let content: String?
+            public let memory_type: String?
+            public let decay_score: Double?
+            public let access_count: Int?
+            public let days_old: Int?
+            public let stale_reason: String?
+            public let recommendation: String?
+        }
+    }
+
+    public struct ContradictionResponse: Codable, Sendable {
+        public let contradictions_found: Int?
+        public let pairs: [ContradictionPair]?
+
+        public struct ContradictionPair: Codable, Sendable {
+            public let memory_a: ContradictionMemory?
+            public let memory_b: ContradictionMemory?
+            public let confidence: Double?
+            public let reasoning: String?
+            public let suggestion: String?
+
+            public struct ContradictionMemory: Codable, Sendable {
+                public let id: String
+                public let content: String
+            }
+        }
+    }
+
     // MARK: - Phase 4 Endpoints (batch, pools, temporal, graph)
 
     /// Batch sync: store multiple entries in sequential calls.

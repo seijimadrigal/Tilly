@@ -78,6 +78,10 @@ public final class ToolRegistry: @unchecked Sendable {
         registry.register(consolidateTool)
         registry.memcloudConsolidateTool = consolidateTool
 
+        // Memcloud stale + contradictions
+        registry.register(MemcloudStaleTool(service: memoryService))
+        registry.register(MemcloudContradictionsTool(service: memoryService))
+
         // Memcloud skill suggestions from patterns
         let suggestSkillsTool = MemcloudSuggestSkillsTool(memoryService: memoryService, skillService: skillService)
         registry.register(suggestSkillsTool)

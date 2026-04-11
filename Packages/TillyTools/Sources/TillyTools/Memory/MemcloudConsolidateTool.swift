@@ -2,14 +2,11 @@ import Foundation
 import TillyCore
 import TillyStorage
 
-/// Tool: Memory consolidation ("Dream Mode").
-/// Merges duplicate memories, resolves contradictions, and cleans stale entries.
-/// Capped at 20 memories scanned to avoid timeout. Use dry_run to preview.
+/// Tool: Memory consolidation via Memcloud server-side "Dream Mode".
+/// Uses the /v1/memories/consolidate endpoint for server-side dedup + merge.
 public final class MemcloudConsolidateTool: ToolExecutable, @unchecked Sendable {
 
     private let memoryService: MemoryService
-
-    /// LLM handler for merging memories. Set by AppState.
     public var consolidationHandler: ((String) async -> String)?
 
     public init(service: MemoryService) {
@@ -21,7 +18,7 @@ public final class MemcloudConsolidateTool: ToolExecutable, @unchecked Sendable 
             type: "function",
             function: .init(
                 name: "memcloud_consolidate",
-                description: "Consolidate cloud memories: find and merge duplicates. Scans up to 20 recent memories for similar entries. Use dry_run=true to preview without changes. Runs quickly — safe to call periodically.",
+                description: "Server-side memory consolidation (Dream Mode). Finds duplicate memories, suggests merges, and optionally applies them. Use dry_run=true to preview. Runs on the server — fast and reliable.",
                 parameters: .object([
                     "type": .string("object"),
                     "properties": .object([
@@ -33,6 +30,14 @@ public final class MemcloudConsolidateTool: ToolExecutable, @unchecked Sendable 
                         "dry_run": .object([
                             "type": .string("boolean"),
                             "description": .string("Preview changes without applying. Default true.")
+                        ]),
+                        "threshold": .object([
+                            "type": .string("number"),
+                            "description": .string("Similarity threshold for duplicates (0.0-1.0). Default 0.85.")
+                        ]),
+                        "limit": .object([
+                            "type": .string("integer"),
+                            "description": .string("Max memories to scan. Default 50.")
                         ])
                     ]),
                     "required": .array([])
@@ -45,105 +50,56 @@ public final class MemcloudConsolidateTool: ToolExecutable, @unchecked Sendable 
         struct Args: Codable {
             let scope: String?
             let dry_run: Bool?
+            let threshold: Double?
+            let limit: Int?
         }
 
-        guard let data = arguments.data(using: .utf8),
-              let args = try? JSONDecoder().decode(Args.self, from: data) else {
-            // Empty args {} is valid — use defaults
-            return await runConsolidation(scope: "duplicates", dryRun: true)
+        let args: Args
+        if let data = arguments.data(using: .utf8),
+           let decoded = try? JSONDecoder().decode(Args.self, from: data) {
+            args = decoded
+        } else {
+            args = Args(scope: nil, dry_run: nil, threshold: nil, limit: nil)
         }
 
-        return await runConsolidation(scope: args.scope ?? "duplicates", dryRun: args.dry_run ?? true)
-    }
-
-    private func runConsolidation(scope: String, dryRun: Bool) async -> ToolResult {
         guard let client = memoryService.memcloudClient else {
             return ToolResult(content: "Memcloud not configured.", isError: true)
         }
 
-        // Fetch recent memories (capped at 20 to avoid timeout)
-        let allMemories: MemcloudClient.SearchResponse
         do {
-            allMemories = try await client.search(query: "stored memories facts decisions preferences", topK: 20)
-        } catch {
-            return ToolResult(content: "Failed to fetch memories: \(error.localizedDescription)", isError: true)
-        }
+            let response = try await client.consolidateServer(
+                scope: args.scope ?? "duplicates",
+                threshold: args.threshold ?? 0.85,
+                dryRun: args.dry_run ?? true,
+                limit: args.limit ?? 50
+            )
 
-        if allMemories.memories.isEmpty {
-            return ToolResult(content: "No memories found in Memcloud to consolidate.")
-        }
+            var report = "## Memory Consolidation Report\n\n"
+            report += "Scanned: \(response.scanned ?? 0) | Dry run: \(args.dry_run ?? true)\n\n"
 
-        var report = "## Memory Consolidation Report\n\n"
-        report += "Scope: \(scope) | Dry run: \(dryRun) | Scanned: \(allMemories.memories.count)\n\n"
-
-        // Find duplicates using pairwise similarity from the existing results
-        // (no extra API calls — use the scores already returned)
-        var duplicateGroups: [[MemcloudClient.SearchResult]] = []
-        var processed: Set<String> = []
-
-        let memories = allMemories.memories
-        for i in 0..<memories.count where !processed.contains(memories[i].id) {
-            var group = [memories[i]]
-            for j in (i+1)..<memories.count where !processed.contains(memories[j].id) {
-                // Simple content similarity check (no API call)
-                let a = memories[i].content.lowercased()
-                let b = memories[j].content.lowercased()
-                let similarity = contentSimilarity(a, b)
-                if similarity > 0.6 {
-                    group.append(memories[j])
-                    processed.insert(memories[j].id)
-                }
-            }
-            if group.count > 1 {
-                duplicateGroups.append(group)
-                processed.insert(memories[i].id)
-            }
-        }
-
-        report += "### Duplicate Groups: \(duplicateGroups.count)\n\n"
-        for (i, group) in duplicateGroups.prefix(10).enumerated() {
-            report += "**Group \(i + 1)** (\(group.count) items):\n"
-            for mem in group {
-                report += "  - \(String(mem.content.prefix(100)))\n"
-            }
-            report += "\n"
-        }
-
-        // Merge if not dry run (capped at 5 groups to avoid timeout)
-        if !dryRun && !duplicateGroups.isEmpty {
-            if let handler = consolidationHandler {
-                var merged = 0
-                for group in duplicateGroups.prefix(5) {
-                    let prompt = "Merge these duplicate memories into one concise entry:\n" +
-                        group.map { "- \(String($0.content.prefix(300)))" }.joined(separator: "\n")
-                    let mergedContent = await handler(prompt)
-
-                    _ = try? await client.store(text: mergedContent, sourceType: "consolidation")
-                    for dupe in group.dropFirst() {
-                        try? await client.delete(memoryId: dupe.id)
+            if let groups = response.duplicate_groups, !groups.isEmpty {
+                report += "### \(groups.count) Duplicate Groups Found\n\n"
+                for group in groups.prefix(10) {
+                    report += "**Group \(group.group_id ?? 0)** (\(group.memories?.count ?? 0) items):\n"
+                    for mem in (group.memories ?? []) {
+                        report += "  - \(String(mem.content.prefix(120)))\n"
                     }
-                    merged += 1
+                    if let merge = group.suggested_merge {
+                        report += "  → Suggested merge: \(String(merge.prefix(200)))\n"
+                    }
+                    report += "\n"
                 }
-                report += "Consolidated \(merged) groups.\n"
             } else {
-                report += "LLM handler not configured. Run with dry_run=true to preview.\n"
+                report += "No duplicates found. Memory base is clean.\n"
             }
+
+            if let actions = response.actions_taken, !actions.isEmpty {
+                report += "\n### Actions: \(actions.map { "\($0.key): \($0.value)" }.joined(separator: ", "))\n"
+            }
+
+            return ToolResult(content: report)
+        } catch {
+            return ToolResult(content: "Consolidation failed: \(error.localizedDescription)", isError: true)
         }
-
-        if duplicateGroups.isEmpty {
-            report += "No duplicates found. Memory base is clean.\n"
-        }
-
-        return ToolResult(content: report)
-    }
-
-    /// Fast local similarity check (Jaccard on word sets) — no API call needed.
-    private func contentSimilarity(_ a: String, _ b: String) -> Double {
-        let wordsA = Set(a.split(separator: " ").map(String.init))
-        let wordsB = Set(b.split(separator: " ").map(String.init))
-        guard !wordsA.isEmpty || !wordsB.isEmpty else { return 0 }
-        let intersection = wordsA.intersection(wordsB).count
-        let union = wordsA.union(wordsB).count
-        return Double(intersection) / Double(union)
     }
 }

@@ -88,7 +88,7 @@ final class AppState {
         "execute_command", "read_file", "write_file", "edit_file", "list_directory",
         "web_search", "web_fetch", "http_request", "git",
         "memory_store", "memory_search", "memory_list", "memory_delete", "memory_edit",
-        "memcloud_recall", "memcloud_answer", "skill_run", "ask_user",
+        "memcloud_recall", "memcloud_answer", "memcloud_check_contradictions", "skill_run", "ask_user",
         "scratchpad_write", "scratchpad_read", "delegate_task",
     ]
 
@@ -263,6 +263,9 @@ final class AppState {
                 title: title,
                 summary: String(summary.prefix(2000))
             )
+
+            // Auto-consolidation (dream mode) when memory count is high
+            _ = try? await client.consolidateServer(scope: "duplicates", threshold: 0.85, dryRun: false, limit: 30)
         }
     }
 
@@ -1020,6 +1023,32 @@ final class AppState {
                 }
                 currentToolName = nil
                 currentToolSummary = nil
+
+                // Capture tool execution trace to Memcloud (background, non-blocking)
+                if let client = memoryService.memcloudClient {
+                    // Capture Sendable values before detached task
+                    let traceTools: [String] = toolResults.map { $0.0.function.name }
+                    let traceArgs: [String] = toolResults.map { String($0.0.function.arguments.prefix(200)) }
+                    let traceSummaries: [String] = toolResults.map { String($0.1.content.prefix(100)) }
+                    let sessionID = currentSession?.id.uuidString ?? "unknown"
+                    let taskPreview = String(session.messages.last(where: { $0.role == .user })?.textContent.prefix(200) ?? "")
+                    let roundNum = round + 1
+                    nonisolated(unsafe) let captureClient = client
+                    Task.detached {
+                        var calls: [[String: Any]] = []
+                        for i in 0..<traceTools.count {
+                            calls.append(["tool": traceTools[i], "args": traceArgs[i], "result_summary": traceSummaries[i], "duration_ms": 0])
+                        }
+                        _ = try? await captureClient.captureTrace(
+                            sessionId: sessionID,
+                            task: taskPreview,
+                            toolCalls: calls,
+                            outcome: "round_\(roundNum)",
+                            durationMs: 0
+                        )
+                    }
+                }
+
                 continue
             }
 
