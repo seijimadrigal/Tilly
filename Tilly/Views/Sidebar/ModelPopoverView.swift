@@ -265,7 +265,13 @@ struct ModelPopoverView: View {
                 if isLoading {
                     HStack { ProgressView().controlSize(.small); Text("Loading...").font(.caption).foregroundStyle(.secondary) }
                 } else if !models.isEmpty {
+                    // Ensure current selection is a valid tag — add it if missing
+                    let currentID = modelBinding.wrappedValue
+                    let hasCurrentInList = models.contains { $0.id == currentID }
                     Picker("", selection: modelBinding) {
+                        if !hasCurrentInList && !currentID.isEmpty {
+                            Text(currentID).tag(currentID)
+                        }
                         ForEach(models) { m in Text(m.name).tag(m.id) }
                     }
                     .labelsHidden()
@@ -340,33 +346,56 @@ struct ModelPopoverView: View {
         setStatus("Failed — no working provider found")
     }
 
-    /// Pick the best model from a list for a given tier/role.
+    /// Pick the best model from a provider's model list for a specific role.
+    ///
+    /// - Flash (Orchestrator): fastest/cheapest — triage classification, plan generation, reflection.
+    ///   Prefers: flash, mini, fast, lite, small, nano, 4-flash, turbo
+    /// - Standard (Sub-Agent): balanced cost/quality — parallel research, file tasks, delegated work.
+    ///   Prefers: chat, standard, v1, deepseek-chat, 8k. Avoids: mini, flash, nano
+    /// - Premium (Main Agent): best reasoning + tool use — complex conversations, orchestration.
+    ///   Prefers: pro, plus, max, 5.1, sonnet, opus, gpt-4o, large. Avoids: mini, flash, lite
     private func pickBestModel(from models: [ModelInfo], provider: ProviderID, tier: ModelRouter.ModelTier) -> String {
-        // Check if there's a known profile match for this provider + tier
-        if let profile = ModelRouter.ModelProfile.defaults.first(where: { $0.providerID == provider && $0.tier == tier }) {
-            if models.contains(where: { $0.id == profile.modelID }) {
-                return profile.modelID
+        // 1. Exact profile match
+        if let profile = ModelRouter.ModelProfile.defaults.first(where: { $0.providerID == provider && $0.tier == tier }),
+           models.contains(where: { $0.id == profile.modelID }) {
+            return profile.modelID
+        }
+
+        let ids = models.map { $0.id.lowercased() }
+
+        // 2. Heuristic match by role
+        switch tier {
+        case .flash:
+            let flashKeywords = ["flash", "mini", "fast", "lite", "small", "nano", "turbo"]
+            for keyword in flashKeywords {
+                if let m = models.first(where: { $0.id.lowercased().contains(keyword) }) { return m.id }
+            }
+
+        case .standard:
+            let avoid = Set(["mini", "flash", "nano", "lite", "small"])
+            // Prefer "chat" models that aren't tiny
+            if let m = models.first(where: {
+                let lower = $0.id.lowercased()
+                return lower.contains("chat") && !avoid.contains(where: { lower.contains($0) })
+            }) { return m.id }
+            // Then any standard-looking model
+            let stdKeywords = ["standard", "v1", "8k", "32k"]
+            for keyword in stdKeywords {
+                if let m = models.first(where: { $0.id.lowercased().contains(keyword) }) { return m.id }
+            }
+
+        case .premium:
+            let avoid = Set(["mini", "flash", "nano", "lite", "small", "fast"])
+            let premiumKeywords = ["pro", "plus", "max", "opus", "sonnet", "5.1", "gpt-4o", "large", "ultra", "thinking"]
+            for keyword in premiumKeywords {
+                if let m = models.first(where: {
+                    let lower = $0.id.lowercased()
+                    return lower.contains(keyword) && !avoid.contains(where: { lower.contains($0) })
+                }) { return m.id }
             }
         }
 
-        // Heuristic: pick by name patterns based on tier
-        let sorted = models.sorted { $0.id < $1.id }
-        switch tier {
-        case .flash:
-            // Prefer "flash", "mini", "small", "fast" in name
-            if let m = sorted.first(where: { $0.id.lowercased().contains("flash") }) { return m.id }
-            if let m = sorted.first(where: { $0.id.lowercased().contains("mini") }) { return m.id }
-            if let m = sorted.first(where: { $0.id.lowercased().contains("fast") }) { return m.id }
-        case .standard:
-            // Prefer "chat", "8k", "v1", avoid "mini"/"flash"
-            if let m = sorted.first(where: { $0.id.lowercased().contains("chat") && !$0.id.lowercased().contains("mini") }) { return m.id }
-        case .premium:
-            // Prefer "pro", "plus", largest version number
-            if let m = sorted.first(where: { $0.id.lowercased().contains("pro") }) { return m.id }
-            if let m = sorted.first(where: { $0.id.lowercased().contains("plus") }) { return m.id }
-        }
-
-        // Fall back to provider's default model, or first available
+        // 3. Provider default
         if let config = appState.providerConfigs.first(where: { $0.providerID == provider }), let dm = config.defaultModel {
             return dm
         }
