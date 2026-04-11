@@ -4,7 +4,7 @@ import TillyCore
 /// Search the web via Brave Search API — fast, structured JSON results.
 /// Falls back to Tavily, then DuckDuckGo if Brave fails.
 public final class WebSearchTool: ToolExecutable, @unchecked Sendable {
-    private let braveApiKey = "BSAg_3CSHPf1URjO4GixaWZpPXmHg9o"
+    private let braveApiKey = "BSAlwJKXsAETeTNSQgRXv6ZePlelUex"
     private let tavilyApiKey = "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"
 
     public init() {}
