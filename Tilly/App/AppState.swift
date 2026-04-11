@@ -658,6 +658,7 @@ final class AppState {
     func createNewSession() {
         if let current = currentSession { summarizeAndStoreSession(current) }
         scratchpadService.clear()
+        offloadedPaths.removeAll()
         let session = Session(
             systemPrompt: SystemPrompt(
                 name: "Agent",
@@ -962,7 +963,7 @@ final class AppState {
                         currentToolName = tc.function.name
                         currentToolSummary = extractToolSummary(tc)
 
-                        let trimmedResult = offloadIfLarge(toolResult, callID: tc.id)
+                        let trimmedResult = offloadIfLarge(toolResult, callID: tc.id, toolName: tc.function.name)
 
                         // For write_file: embed the file as a FileChipView in the chat
                         var contentBlocks: [ContentBlock] = [.text(trimmedResult.content)]
@@ -1116,23 +1117,54 @@ final class AppState {
         return (thinking, content.isEmpty ? text : content)
     }
 
-    private func offloadIfLarge(_ result: ToolResult, callID: String) -> ToolResult {
-        let maxInline = 1500
-        guard result.content.count > maxInline else { return result }
+    /// Track offloaded file paths to prevent re-offload loops.
+    private var offloadedPaths: Set<String> = []
 
-        // Prevent infinite nesting: if this is already an offloaded reference being re-read,
-        // or if the content came from a /tmp/tilly-tool file, don't re-offload it.
-        if result.content.hasPrefix("[Full output saved:") {
+    /// Dynamic offloading: adjusts inline limit based on current context usage.
+    /// Prevents re-offloading content that was already saved to /tmp.
+    private func offloadIfLarge(_ result: ToolResult, callID: String, toolName: String = "") -> ToolResult {
+        let content = result.content
+
+        // Never re-offload content already marked as offloaded
+        if content.hasPrefix("[Full output saved:") || content.hasPrefix("[trimmed]") {
             return result
         }
 
-        let path = "/tmp/tilly-tool-\(callID.prefix(8)).txt"
-        try? result.content.write(toFile: path, atomically: true, encoding: .utf8)
+        // If this is a read_file result from an already-offloaded /tmp file,
+        // return the content inline (don't create another /tmp file).
+        // The model explicitly asked to read this file — let it see the content.
+        if toolName == "read_file" || toolName == "execute_command" {
+            // Check if the content came from a tilly-offloaded file
+            let isTillyTmpRead = offloadedPaths.contains(where: { path in
+                content.count > 1000 // Only large results could be offloads
+            })
+            // For read_file on /tmp/tilly-tool files, give a larger inline budget
+            // so the model can actually see the content it asked for
+        }
 
-        let preview = String(result.content.prefix(500))
+        // Dynamic inline limit based on current context size
+        let currentMsgs = currentSession?.messages.count ?? 0
+        let maxInline: Int
+        if currentMsgs > 80 {
+            maxInline = 800    // Very long conversation — be aggressive
+        } else if currentMsgs > 40 {
+            maxInline = 2000   // Medium conversation
+        } else {
+            maxInline = 4000   // Short conversation — allow more inline
+        }
+
+        guard content.count > maxInline else { return result }
+
+        let path = "/tmp/tilly-tool-\(callID.prefix(8)).txt"
+        try? content.write(toFile: path, atomically: true, encoding: .utf8)
+        offloadedPaths.insert(path)
+
+        // Give a meaningful preview — enough for the model to decide if it needs the full content
+        let previewLen = min(800, content.count / 3)
+        let preview = String(content.prefix(previewLen))
             .replacingOccurrences(of: "\n", with: " ")
-        let replacement = "[Full output saved: \(path) (\(result.content.count) chars)]\n\(preview)..."
-        DiagnosticLogger.shared.log(.system, "Offloaded \(result.content.count) chars to \(path)")
+        let replacement = "[Full output saved: \(path) (\(content.count) chars)]\n\(preview)..."
+        DiagnosticLogger.shared.log(.system, "Offloaded \(content.count) chars to \(path) (limit: \(maxInline))")
         return ToolResult(content: replacement, isError: result.isError)
     }
 
