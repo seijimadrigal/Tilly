@@ -34,9 +34,11 @@ public final class SubAgentRunner: @unchecked Sendable {
         let toolDefinitions = tools.map(\.definition)
         let toolMap = Dictionary(uniqueKeysWithValues: tools.map { ($0.definition.function.name, $0) })
 
-        var finalText = ""
+        // Accumulate ALL assistant text across rounds (not just the last message)
+        var accumulatedText = ""
+        var toolResultsSummary: [String] = []
 
-        for _ in 0..<maxRounds {
+        for round in 0..<maxRounds {
             let request = ChatCompletionRequest(
                 model: model,
                 messages: messages,
@@ -45,7 +47,17 @@ public final class SubAgentRunner: @unchecked Sendable {
                 tools: toolDefinitions.isEmpty ? nil : toolDefinitions
             )
 
-            let response = try await provider.complete(request)
+            let response: ChatCompletionResponse
+            do {
+                response = try await provider.complete(request)
+            } catch {
+                // LLM call failed — return whatever we have so far
+                if !accumulatedText.isEmpty { return accumulatedText }
+                if !toolResultsSummary.isEmpty {
+                    return "Sub-agent completed \(round) rounds. Tool results:\n" + toolResultsSummary.joined(separator: "\n")
+                }
+                return "Sub-agent LLM error: \(error.localizedDescription)"
+            }
 
             guard let choice = response.choices.first else {
                 break
@@ -53,6 +65,11 @@ public final class SubAgentRunner: @unchecked Sendable {
 
             let assistantContent = choice.message.content ?? ""
             let assistantToolCalls = choice.message.toolCalls ?? []
+
+            // Accumulate any text the assistant produces (even alongside tool calls)
+            if !assistantContent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                accumulatedText += (accumulatedText.isEmpty ? "" : "\n\n") + assistantContent
+            }
 
             // Add assistant message to history
             messages.append(ChatCompletionRequest.ChatMessage(
@@ -63,7 +80,6 @@ public final class SubAgentRunner: @unchecked Sendable {
 
             // If there are tool calls, execute them
             if !assistantToolCalls.isEmpty {
-                // Execute tools in parallel
                 let results: [(ToolCall, ToolResult)] = await withTaskGroup(
                     of: (ToolCall, ToolResult).self,
                     returning: [(ToolCall, ToolResult)].self
@@ -88,25 +104,32 @@ public final class SubAgentRunner: @unchecked Sendable {
                     return r
                 }
 
-                // Add tool results to history
+                // Add tool results to history and track summaries
                 for tc in assistantToolCalls {
                     if let (_, toolResult) = results.first(where: { $0.0.id == tc.id }) {
                         messages.append(ChatCompletionRequest.ChatMessage(
                             role: "tool",
-                            content: toolResult.content,
+                            content: String(toolResult.content.prefix(3000)),
                             toolCallID: tc.id
                         ))
+                        toolResultsSummary.append("[\(tc.function.name)] \(String(toolResult.content.prefix(200)))")
                     }
                 }
 
-                continue  // Let LLM see the results
+                continue
             }
 
             // No tool calls — agent is done
-            finalText = assistantContent
             break
         }
 
-        return finalText.isEmpty ? "(Sub-agent produced no output)" : finalText
+        // Return accumulated text, or synthesize from tool results if text is empty
+        if !accumulatedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return accumulatedText
+        }
+        if !toolResultsSummary.isEmpty {
+            return "Sub-agent findings:\n" + toolResultsSummary.joined(separator: "\n")
+        }
+        return "(Sub-agent produced no output)"
     }
 }
